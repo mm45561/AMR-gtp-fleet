@@ -4,7 +4,9 @@ import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription, SetEnvironmentVariable, TimerAction
+from launch.actions import (DeclareLaunchArgument, IncludeLaunchDescription,
+                            SetEnvironmentVariable, TimerAction)
+from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
 
@@ -13,6 +15,11 @@ def generate_launch_description():
     nav_share = get_package_share_directory('amr_navigation')
     nav2_share = get_package_share_directory('nav2_bringup')
     docking_share = get_package_share_directory('amr_docking')
+
+    # slam:=True draws a new map with our own LiDAR instead of loading warehouse.yaml
+    slam = DeclareLaunchArgument(
+        'slam', default_value='False',
+        description='Build a new map (SLAM) instead of loading one')
 
     # 1. Render Gazebo (and RViz) on the NVIDIA card, like the prefix we typed by hand
     nvidia = [
@@ -37,6 +44,7 @@ def generate_launch_description():
             os.path.join(nav2_share, 'launch', 'bringup_launch.py'),
             launch_arguments={
                 'use_sim_time': 'True',
+                'slam': LaunchConfiguration('slam'),
                 'map': os.path.join(gazebo_share, 'maps', 'warehouse.yaml'),
                 'params_file': os.path.join(nav_share, 'config', 'nav2_params.yaml'),
             }.items()),
@@ -54,4 +62,4 @@ def generate_launch_description():
              parameters=[{'use_sim_time': True}]),
     ]
 
-    return LaunchDescription([*nvidia, simulation, rviz, navigation, *tags])
+    return LaunchDescription([slam, *nvidia, simulation, rviz, navigation, *tags])
