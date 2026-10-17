@@ -20,6 +20,10 @@ def generate_launch_description():
     slam = DeclareLaunchArgument(
         'slam', default_value='False',
         description='Build a new map (SLAM) instead of loading one')
+    # map:=<file.yaml> loads another map; the default stays the TurtleBot 4 warehouse map
+    map_file = DeclareLaunchArgument(
+        'map', default_value=os.path.join(gazebo_share, 'maps', 'warehouse.yaml'),
+        description='Map to load (not used when slam:=True)')
 
     # 1. Render Gazebo (and RViz) on the NVIDIA card, like the prefix we typed by hand
     nvidia = [
@@ -45,7 +49,7 @@ def generate_launch_description():
             launch_arguments={
                 'use_sim_time': 'True',
                 'slam': LaunchConfiguration('slam'),
-                'map': os.path.join(gazebo_share, 'maps', 'warehouse.yaml'),
+                'map': LaunchConfiguration('map'),
                 'params_file': os.path.join(nav_share, 'config', 'nav2_params.yaml'),
             }.items()),
     ])
@@ -62,4 +66,4 @@ def generate_launch_description():
              parameters=[{'use_sim_time': True}]),
     ]
 
-    return LaunchDescription([slam, *nvidia, simulation, rviz, navigation, *tags])
+    return LaunchDescription([slam, map_file, *nvidia, simulation, rviz, navigation, *tags])
