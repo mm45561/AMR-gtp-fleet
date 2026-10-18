@@ -35,10 +35,11 @@ def generate_launch_description():
     simulation = IncludeLaunchDescription(
         os.path.join(gazebo_share, 'launch', 'sim.launch.py'))
 
-    # 3. RViz with the Nav2 layout, 5 s later so the robot already exists
+    # 3. RViz with the Nav2 layout plus the robot model and the front camera
+    #    (rviz/amr.rviz), 5 s later so the robot already exists
     rviz = TimerAction(period=5.0, actions=[
         Node(package='rviz2', executable='rviz2', output='screen',
-             arguments=['-d', os.path.join(nav2_share, 'rviz', 'nav2_default_view.rviz')],
+             arguments=['-d', os.path.join(nav_share, 'rviz', 'amr.rviz')],
              parameters=[{'use_sim_time': True}]),
     ])
 
