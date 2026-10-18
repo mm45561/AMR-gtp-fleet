@@ -127,7 +127,9 @@ controller_server:
     general_goal_checker:
       stateful: true
       plugin: "nav2_controller::SimpleGoalChecker"
-      xy_goal_tolerance: 0.25
+      # 0.25 let the robot stop 22 cm short of sort_1's staging pose (it arrives from
+      # behind); the floor tag was then 1.52 m away, too small for the camera to decode
+      xy_goal_tolerance: 0.1
       yaw_goal_tolerance: 0.25
       path_length_tolerance: 1.0
     PathHandler:
