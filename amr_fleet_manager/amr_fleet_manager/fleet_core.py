@@ -171,6 +171,13 @@ class FleetCore:
             code = RobotStateCode.UNKNOWN
         if not robot.online:
             self._log.info(f'{robot_id} is online ({code.name})')
+        if robot.faulted and robot.state == RobotStateCode.ERROR and code == RobotStateCode.IDLE:
+            # Someone cleared the problem on the floor and called /<robot_id>/reset.
+            # Forget where it was heading: it is adopted or sent home like a new robot,
+            # and keeps each place it holds until it is clearance_m away from it.
+            robot.faulted = False
+            robot.anchor = None
+            self._log.info(f'{robot_id} was reset; it gets work again')
         if code == RobotStateCode.IDLE and robot.state != RobotStateCode.IDLE:
             robot.idle_since = now
         robot.state = code
@@ -255,7 +262,7 @@ class FleetCore:
         self._log.error(
             f'{task.task_id}: {robot.robot_id} failed {task.task_type.name}: {message}. '
             f'It keeps {self._reservations.held_by(robot.robot_id)} and gets no more work; '
-            'clear the problem on the floor, then restart the fleet manager.')
+            f'clear the problem on the floor, then call /{robot.robot_id}/reset.')
 
     # ---------------------------------------------------------- tick stages
 

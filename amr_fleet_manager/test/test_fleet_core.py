@@ -213,6 +213,33 @@ def test_failed_task_faults_the_robot_and_blocks_the_dock():
     assert sim.holder('dock:gtp_1') == 'amr_1'
 
 
+def test_reset_robot_is_sent_home_and_frees_the_dock():
+    sim = FleetSim()
+    sim.park_all()
+    task = only(sim.tick())                     # amr_1 -> GO_TO_STATION gtp_1
+    sim.core.on_task_accepted(task.task_id)
+    sim.core.on_task_finished(task.task_id, False, 'docking failed')
+    sim.report('amr_1', S.ERROR, 0.0, 0.5)      # stopped 1.5 m short of the dock
+    assert sim.tick() == []
+    sim.report('amr_1', S.IDLE, 0.0, 0.5)       # someone called /amr_1/reset
+    tasks = {task.robot_id: task for task in sim.tick()}
+    assert not sim.core.robot('amr_1').faulted
+    assert tasks['amr_1'].task_type == TaskType.RETURN_TO_QUEUE
+    assert tasks['amr_2'].task_type == TaskType.GO_TO_STATION   # the dock is free again
+
+
+def test_idle_report_alone_does_not_clear_a_fault():
+    sim = FleetSim()
+    sim.park_all()
+    task = only(sim.tick())
+    sim.core.on_task_accepted(task.task_id)
+    sim.report('amr_1', S.TO_GTP, -1.0, 1.5)    # driving to the dock
+    sim.core.on_task_finished(task.task_id, False, 'docking failed')
+    sim.report('amr_1', S.IDLE, -1.0, 1.5)      # IDLE again, but never in ERROR: no reset
+    assert sim.tick() == []
+    assert sim.core.robot('amr_1').faulted
+
+
 def test_invalid_configuration_is_rejected():
     with pytest.raises(ValueError, match='queue slots'):
         FleetCore(SITE, ['a', 'b', 'c', 'd'])

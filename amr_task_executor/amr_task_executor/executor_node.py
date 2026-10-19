@@ -21,6 +21,7 @@ from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import ExternalShutdownException, MultiThreadedExecutor
 from rclpy.node import Node
 from rclpy.time import Time
+from std_srvs.srv import Trigger
 from tf2_ros import Buffer, TransformException, TransformListener
 
 # ExecuteTask.task_type -> trigger of the state machine
@@ -68,6 +69,7 @@ class ExecutorNode(Node):
             goal_callback=self._on_goal,
             cancel_callback=lambda _goal_handle: CancelResponse.ACCEPT,
             callback_group=group)
+        self.create_service(Trigger, 'reset', self._on_reset)
         self.get_logger().info(f'{self._robot_id} executor ready ({self._sm.state.name})')
 
     def _on_goal(self, goal: ExecuteTask.Goal) -> GoalResponse:
@@ -79,6 +81,17 @@ class ExecutorNode(Node):
                 return GoalResponse.REJECT
             self._busy = True
         return GoalResponse.ACCEPT
+
+    def _on_reset(self, request: Trigger.Request,
+                  response: Trigger.Response) -> Trigger.Response:
+        """Leave ERROR once someone has cleared the problem on the floor."""
+        with self._lock:
+            response.success = not self._busy and self._sm.fire('reset')
+            state = self._sm.state.name
+        response.message = 'back to IDLE' if response.success else f'nothing to reset ({state})'
+        self.get_logger().info(f'reset: {response.message}')
+        self._publish_state()
+        return response
 
     def _execute(self, goal_handle) -> ExecuteTask.Result:
         goal = goal_handle.request
