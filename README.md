@@ -9,11 +9,10 @@ picked items from a Goods-to-Person (GTP) pick station to a sorting / consolidat
       └─────────────────────────────────── return ───────────────────────────────────────────┘
 ```
 
-**Status:** one AMR runs the whole cycle in Gazebo under the fleet manager: it drives
-with Nav2 and parks on a floor AprilTag at every place, and the fleet side starts with
-one launch file. A robot that fails waits for a person and goes back to work with one
-service call. Every robot now runs under its own namespace (`/amr_1`, `/amr_2`, ...), and
-one launch file starts one to three of them; the cycle with three AMRs is being tested.
+**Status:** three AMRs run the GTP cycle together in Gazebo under the fleet manager. Each
+one drives with its own Nav2 under `/amr_N` and parks on a floor AprilTag at every place;
+when the docked robot leaves with a delivery, the next one is called to the station. A
+robot that fails waits for a person and goes back to work with one service call.
 
 Design details, the robot state list and the deadlock rules are in
 [docs/architecture.md](docs/architecture.md).
@@ -31,7 +30,7 @@ This repository is the `src/` folder of a colcon workspace (for example `~/amr_w
 | `amr_navigation` | ament_cmake (config only) | each robot | ✅ done | Nav2 parameters (AMCL, MPPI inside a rotation shim, docking server), launch file for one robot's Nav2 and tag reader, RViz layout |
 | `amr_description` | ament_cmake | each robot | ✅ done | URDF / xacro of the AMR: LiDAR, front camera, Gazebo plugins; `namespace:=` puts its Gazebo topics under `/amr_N` |
 | `amr_gazebo` | ament_cmake | simulation | ✅ done | Warehouse world with floor AprilTags, map; launch file that adds one robot with its own ROS ⇄ Gazebo bridge |
-| `amr_bringup` | ament_cmake | both | 🚧 testing 3 AMRs | `sim.launch.py`: Gazebo with 1–3 AMRs, each with its Nav2 under `/amr_N`; `fleet.launch.py`: one task executor per robot and the fleet manager |
+| `amr_bringup` | ament_cmake | both | ✅ done | `sim.launch.py`: Gazebo with 1–3 AMRs, each with its Nav2 under `/amr_N`; `fleet.launch.py`: one task executor per robot and the fleet manager |
 | `amr_hardware_interface` | ament_cmake (C++) | each robot | ⏳ planned | ros2_control diff-drive, battery, e-stop, bin sensors |
 | `amr_station_hmi` | ament_python | GTP station PC | ⏳ planned | Touchscreen / button that calls `/fleet/dispatch_amr` |
 
@@ -85,20 +84,22 @@ Start each step only when the previous one prints the line shown.
 
 | Step | Terminal | Command | Wait for |
 |---|---|---|---|
-| 1 | 1 | `ros2 launch amr_bringup sim.launch.py robots:=1` | the map in RViz, then 40 s more |
-| 2 | 2 | `ros2 launch amr_bringup fleet.launch.py robots:=1` | `finished GO_TO_STATION at gtp_1` |
+| 1 | 1 | `ros2 launch amr_bringup sim.launch.py` | the map in RViz, then 60 s more |
+| 2 | 2 | `ros2 launch amr_bringup fleet.launch.py` | `finished GO_TO_STATION at gtp_1` |
 | 3 | 3 | `ros2 service call /fleet/dispatch_amr amr_interfaces/srv/DispatchAmr "{station_id: gtp_1}"` | `finished DELIVER at sort_1` |
 
-Step 1 starts Gazebo, puts `amr_1` into queue slot `q1` and starts its Nav2 and tag
-reader, all under `/amr_1`. Step 2 starts its task executor and the fleet manager.
+Step 1 starts Gazebo and puts `amr_1`, `amr_2` and `amr_3` into queue slots `q1`, `q2`
+and `q3`; each robot's Nav2 and tag reader start under its namespace, 5 s apart. RViz
+shows `amr_1` (`rviz_robot:=amr_2` shows another one). Step 2 starts the three task
+executors and the fleet manager.
 
-The fleet manager finds the robot parked in `q1` and calls it to `gtp_1`. After the
-dispatch it delivers to `sort_1`, unloads for 4 s, returns to the queue and comes back
-to `gtp_1` on its own. To stop, press Ctrl + C in terminal 2, then in terminal 1.
+The fleet manager finds the robots parked and calls the nearest one to `gtp_1`. After the
+dispatch that robot delivers to `sort_1`; as soon as it is 1 m clear of the dock, the
+next robot is called to the station. The first one unloads for 4 s and returns to a free
+queue slot. To stop, press Ctrl + C in terminal 2, then in terminal 1.
 
-`robots:=3` (the default) in steps 1 and 2 starts `amr_1`, `amr_2` and `amr_3` in `q1`,
-`q2` and `q3`, each with its own Nav2, 5 s apart. RViz shows `amr_1`;
-`rviz_robot:=amr_2` in step 1 shows another one.
+`robots:=1` in steps 1 and 2 runs only `amr_1`, which is lighter on the PC (wait 40 s
+after the map instead of 60 s).
 
 Measured in this simulation:
 
@@ -107,7 +108,10 @@ Measured in this simulation:
 | Docking | 5 of 5 places in a full cycle, no retries |
 | Final position on the tag | about 1 cm, heading under 0.3° |
 | AMCL error at `gtp_1` | 2–4 cm |
-| One cycle (dispatch → back at `gtp_1`) | about 2.5 min |
+| One cycle with one AMR (dispatch → back at `gtp_1`) | about 2.5 min |
+| Queue slot `q1` → docked at `gtp_1` | about 33 s |
+| Three AMRs: Gazebo real-time factor | 99.5 % (RTX 3060) |
+| Three AMRs: handoff at `gtp_1` | the next robot is called once the leaving one is 1 m clear |
 
 ## When a robot fails
 
@@ -151,5 +155,6 @@ The allocation logic does not import ROS, so its tests also run on their own:
 
 ## Roadmap
 
-1. Three AMRs in one Gazebo world, each with its own namespace, Nav2 and tag reader.
+1. A short wait when the fleet manager starts, so it calls the nearest robot to the
+   station and not simply the first one that reports.
 2. `amr_station_hmi`, then `amr_hardware_interface` for a real robot.

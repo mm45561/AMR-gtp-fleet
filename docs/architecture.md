@@ -133,6 +133,9 @@ tag's pose.
 - If a robot reboots in the middle of a task, its goal is lost. Compare
   `RobotState.task_id` with the active task, and fail the task when they disagree for
   longer than the heartbeat timeout.
+- At start the fleet manager calls the nearest of the robots that have reported so
+  far; when one robot reports a moment before the others, it is called even if it
+  is not the nearest. A short startup wait (or "all robot_ids online") fixes this.
 - No charging task: robots below `min_battery_percent` simply get no new work.
 - Queue slots must be side-by-side bays. A single-file lane would need "move up"
   tasks.
