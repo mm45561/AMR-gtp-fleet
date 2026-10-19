@@ -11,7 +11,8 @@ picked items from a Goods-to-Person (GTP) pick station to a sorting / consolidat
 
 **Status:** one AMR runs the whole cycle in Gazebo under the fleet manager: it drives
 with Nav2 and parks on a floor AprilTag at every place, and the fleet side starts with
-one launch file. Next: three AMRs.
+one launch file. A robot that fails waits for a person and goes back to work with one
+service call. Next: three AMRs.
 
 Design details, the robot state list and the deadlock rules are in
 [docs/architecture.md](docs/architecture.md).
@@ -44,6 +45,7 @@ the interfaces below, so either side can be replaced later (for example by Open-
 | `/fleet/dispatch_amr` | `amr_interfaces/srv/DispatchAmr` | station HMI → fleet manager |
 | `/<robot_id>/robot_state` | `amr_interfaces/msg/RobotState` | robot → fleet manager, ≥ 1 Hz (also the heartbeat) |
 | `/<robot_id>/execute_task` | `amr_interfaces/action/ExecuteTask` | fleet manager → robot, one goal per leg |
+| `/<robot_id>/reset` | `std_srvs/srv/Trigger` | person on the floor → robot, after a failure is cleared |
 
 ## Quick start 1: simulated fleet, no Gazebo needed
 
@@ -102,6 +104,36 @@ Measured in this simulation:
 | AMCL error at `gtp_1` | 2–4 cm |
 | One cycle (dispatch → back at `gtp_1`) | about 2.5 min |
 
+## When a robot fails
+
+A robot that cannot finish a leg (blocked path, tag not found, docking cancelled) goes
+to `ERROR` and stops. The fleet manager gives it no more work and keeps every place it
+holds, so no other robot is sent there. The log says what to do:
+
+```text
+amr_1 failed GO_TO_STATION: docking at gtp_1 failed. It keeps ['dock:gtp_1'] and gets
+no more work; clear the problem on the floor, then call /amr_1/reset.
+```
+
+Clear the problem, then:
+
+```bash
+ros2 service call /amr_1/reset std_srvs/srv/Trigger    # answers 'back to IDLE'
+```
+
+The fleet manager logs `amr_1 was reset; it gets work again` and puts the robot back in
+the queue: a robot standing at a slot is adopted there, any other is sent to the nearest
+free slot (a slot it still holds counts as free). Every other place it held is freed once
+the robot is `clearance_m` (1 m) away. A reset is refused when the robot is not in
+`ERROR` (`nothing to reset`).
+
+To try it in Quick start 2, make the next leg fail by cancelling its docking goal. This
+loop cancels the first docking goal it finds, then stops:
+
+```bash
+until ros2 service call /dock_robot/_action/cancel_goal action_msgs/srv/CancelGoal "{}" | grep -F "goals_canceling=[a"; do sleep 1; done
+```
+
 ## Tests
 
 ```bash
@@ -114,6 +146,5 @@ The allocation logic does not import ROS, so its tests also run on their own:
 
 ## Roadmap
 
-1. A reset for a robot in `ERROR`, instead of restarting the executor and the fleet manager.
-2. Three AMRs in one Gazebo world, each with its own namespace, Nav2 and tag reader.
-3. `amr_station_hmi`, then `amr_hardware_interface` for a real robot.
+1. Three AMRs in one Gazebo world, each with its own namespace, Nav2 and tag reader.
+2. `amr_station_hmi`, then `amr_hardware_interface` for a real robot.

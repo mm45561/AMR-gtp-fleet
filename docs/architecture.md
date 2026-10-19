@@ -55,7 +55,7 @@ sequenceDiagram
 | 5 | `IN_TRANSIT` | Driving loaded to a drop-off |
 | 6 | `UNLOADING` | At the drop-off, waiting for the worker |
 | 7 | `RETURNING` | Driving empty to a queue slot |
-| 0 / 8 | `UNKNOWN` / `ERROR` | Not reported yet / needs a human |
+| 0 / 8 | `UNKNOWN` / `ERROR` | Not reported yet / needs a human, who then calls `/<robot_id>/reset` |
 
 `TO_GTP` was added to the requested six states because the robot has to get from the
 queue to the station somehow. `UNKNOWN` and `ERROR` make failures visible instead of
@@ -86,7 +86,10 @@ created, not that the delivery is finished.
 3. *Slots ≥ robots.* This is checked at startup. A robot that finishes a delivery
    always has a free slot, so a returning robot can never wait forever.
 4. *Fail safe.* An offline or faulted robot keeps every reservation it holds.
-   Nobody is sent into a place that it may still be blocking.
+   Nobody is sent into a place that it may still be blocking. After the reset
+   (`ERROR` → `IDLE`) it is placed like a robot that just reported in, except that
+   the places it still holds count as free for it; it keeps each one until it is
+   `clearance_m` away.
 
 **Selection policy** (`selection_policy`): `nearest` (straight-line distance to the
 dock, ties broken by idle time) or `longest_idle` (spreads wear and battery use evenly).
@@ -128,8 +131,6 @@ tag's pose.
 - If a robot reboots in the middle of a task, its goal is lost. Compare
   `RobotState.task_id` with the active task, and fail the task when they disagree for
   longer than the heartbeat timeout.
-- No `reset_robot` service yet: a faulted robot is cleared by restarting the fleet
-  manager, which then re-adopts every robot where it stands.
 - No charging task: robots below `min_battery_percent` simply get no new work.
 - Queue slots must be side-by-side bays. A single-file lane would need "move up"
   tasks.
