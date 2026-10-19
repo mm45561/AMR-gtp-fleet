@@ -240,6 +240,32 @@ def test_idle_report_alone_does_not_clear_a_fault():
     assert sim.core.robot('amr_1').faulted
 
 
+def test_reset_robot_next_to_its_slot_returns_to_that_slot():
+    sim = FleetSim(robot_ids=('amr_1',))
+    sim.report('amr_1', S.IDLE, -2.7, 1.0)          # 0.7 m from q1
+    task = only(sim.tick())                         # amr_1 -> RETURN_TO_QUEUE q1
+    sim.core.on_task_accepted(task.task_id)
+    sim.core.on_task_finished(task.task_id, False, 'docking failed')
+    sim.report('amr_1', S.ERROR, -2.7, 1.0)
+    assert sim.tick() == []
+    sim.report('amr_1', S.IDLE, -2.7, 1.0)          # reset; it still holds q1
+    task = only(sim.tick())
+    assert (task.task_type, task.target_id) == (TaskType.RETURN_TO_QUEUE, 'q1')
+
+
+def test_reset_robot_standing_on_its_slot_is_found_there():
+    sim = FleetSim()
+    sim.park_all()
+    task = only(sim.tick())                         # amr_1 -> GO_TO_STATION gtp_1
+    sim.core.on_task_accepted(task.task_id)
+    sim.core.on_task_finished(task.task_id, False, 'path blocked')
+    sim.report('amr_1', S.ERROR, -2.0, 1.2)         # it never left q1
+    assert sim.tick() == []
+    sim.report('amr_1', S.IDLE, -2.0, 1.2)          # reset
+    sim.tick()
+    assert sim.core.robot('amr_1').anchor == 'slot:q1'
+
+
 def test_invalid_configuration_is_rejected():
     with pytest.raises(ValueError, match='queue slots'):
         FleetCore(SITE, ['a', 'b', 'c', 'd'])

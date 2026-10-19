@@ -299,7 +299,7 @@ class FleetCore:
                 candidates = [dock_key(station_id) for station_id in self._site.stations]
             else:
                 candidates = []
-            place = self._nearest_free(robot.pose, candidates)
+            place = self._nearest_free(robot, candidates)
             if (place is not None and robot.pose.distance_to(self._site.resource_pose(place))
                     <= self._cfg.match_tolerance_m):
                 self._reservations.try_acquire(place, robot.robot_id)
@@ -320,7 +320,7 @@ class FleetCore:
                     or robot.state != RobotStateCode.IDLE or now < robot.cooldown_until
                     or resource_kind(robot.anchor) not in ('', 'dest')):
                 continue
-            slot = self._nearest_free(robot.pose, slots)
+            slot = self._nearest_free(robot, slots)
             if slot is not None:
                 self._submit(self._new_task(TaskType.RETURN_TO_QUEUE, robot, slot))
 
@@ -361,11 +361,12 @@ class FleetCore:
             return min(candidates, key=lambda r: (r.pose.distance_to(target), r.idle_since))
         return min(candidates, key=lambda r: r.idle_since)
 
-    def _nearest_free(self, pose: Pose2D, keys: list[str]) -> str | None:
-        free = [key for key in keys if self._reservations.holder(key) is None]
+    def _nearest_free(self, robot: RobotRecord, keys: list[str]) -> str | None:
+        """Return the nearest place no other robot holds; after a reset it may hold one."""
+        free = [key for key in keys if self._reservations.holder(key) in (None, robot.robot_id)]
         if not free:
             return None
-        return min(free, key=lambda key: pose.distance_to(self._site.resource_pose(key)))
+        return min(free, key=lambda key: robot.pose.distance_to(self._site.resource_pose(key)))
 
     def _new_task(self, task_type: TaskType, robot: RobotRecord, resource: str) -> Task:
         task_id = f'{task_type.name.lower()}-{uuid.uuid4().hex[:8]}'
