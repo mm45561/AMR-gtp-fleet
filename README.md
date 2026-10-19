@@ -12,7 +12,8 @@ picked items from a Goods-to-Person (GTP) pick station to a sorting / consolidat
 **Status:** one AMR runs the whole cycle in Gazebo under the fleet manager: it drives
 with Nav2 and parks on a floor AprilTag at every place, and the fleet side starts with
 one launch file. A robot that fails waits for a person and goes back to work with one
-service call. Next: three AMRs.
+service call. Every robot now runs under its own namespace (`/amr_1`, `/amr_2`, ...), and
+one launch file starts one to three of them; the cycle with three AMRs is being tested.
 
 Design details, the robot state list and the deadlock rules are in
 [docs/architecture.md](docs/architecture.md).
@@ -27,10 +28,10 @@ This repository is the `src/` folder of a colcon workspace (for example `~/amr_w
 | `amr_fleet_manager` | ament_python | fleet server | ✅ done | Task allocation, dock / drop-off / queue reservations, mock AMR for testing |
 | `amr_task_executor` | ament_python | each robot | ✅ done | Mission state machine; serves `execute_task` with Nav2's docking server, then turns in place on the floor tag |
 | `amr_docking` | ament_python | each robot | ✅ done | Passes the pose of the AprilTag the camera sees to Nav2's docking server |
-| `amr_navigation` | ament_cmake (config only) | each robot | ✅ done | Nav2 parameters (AMCL, MPPI inside a rotation shim, docking server), bringup launch, RViz layout |
-| `amr_description` | ament_cmake | each robot | ✅ done | URDF / xacro of the AMR: LiDAR, front camera, Gazebo plugins |
-| `amr_gazebo` | ament_cmake | simulation | ✅ done | Warehouse world with floor AprilTags, map, robot spawn, ROS ⇄ Gazebo bridge |
-| `amr_bringup` | ament_cmake | both | ✅ done | `fleet.launch.py`: one task executor per robot and the fleet manager; next, a multi-robot Gazebo world |
+| `amr_navigation` | ament_cmake (config only) | each robot | ✅ done | Nav2 parameters (AMCL, MPPI inside a rotation shim, docking server), launch file for one robot's Nav2 and tag reader, RViz layout |
+| `amr_description` | ament_cmake | each robot | ✅ done | URDF / xacro of the AMR: LiDAR, front camera, Gazebo plugins; `namespace:=` puts its Gazebo topics under `/amr_N` |
+| `amr_gazebo` | ament_cmake | simulation | ✅ done | Warehouse world with floor AprilTags, map; launch file that adds one robot with its own ROS ⇄ Gazebo bridge |
+| `amr_bringup` | ament_cmake | both | 🚧 testing 3 AMRs | `sim.launch.py`: Gazebo with 1–3 AMRs, each with its Nav2 under `/amr_N`; `fleet.launch.py`: one task executor per robot and the fleet manager |
 | `amr_hardware_interface` | ament_cmake (C++) | each robot | ⏳ planned | ros2_control diff-drive, battery, e-stop, bin sensors |
 | `amr_station_hmi` | ament_python | GTP station PC | ⏳ planned | Touchscreen / button that calls `/fleet/dispatch_amr` |
 
@@ -77,23 +78,27 @@ ros2 service call /fleet/dispatch_amr amr_interfaces/srv/DispatchAmr "{station_i
 The robot drives to `sort_1`. As soon as it is 1 m clear of the dock, the next robot is
 called to replace it. The first one unloads and then returns to a free queue slot.
 
-## Quick start 2: one AMR in Gazebo, full cycle
+## Quick start 2: AMRs in Gazebo, full cycle
 
 Tested on Ubuntu 26.04 with ROS 2 Lyrical, Gazebo Jetty, Nav2 and `apriltag_ros`.
 Start each step only when the previous one prints the line shown.
 
 | Step | Terminal | Command | Wait for |
 |---|---|---|---|
-| 1 | 1 | `ros2 launch amr_navigation bringup.launch.py` | the map in RViz, then 40 s more |
-| 2 | 2 | `ros2 launch amr_bringup fleet.launch.py` | `finished GO_TO_STATION at gtp_1` |
+| 1 | 1 | `ros2 launch amr_bringup sim.launch.py robots:=1` | the map in RViz, then 40 s more |
+| 2 | 2 | `ros2 launch amr_bringup fleet.launch.py robots:=1` | `finished GO_TO_STATION at gtp_1` |
 | 3 | 3 | `ros2 service call /fleet/dispatch_amr amr_interfaces/srv/DispatchAmr "{station_id: gtp_1}"` | `finished DELIVER at sort_1` |
 
-Step 2 starts the task executor of `amr_1` and the fleet manager together; the list of
-robots is `ROBOTS` in `amr_bringup/launch/fleet.launch.py`.
+Step 1 starts Gazebo, puts `amr_1` into queue slot `q1` and starts its Nav2 and tag
+reader, all under `/amr_1`. Step 2 starts its task executor and the fleet manager.
 
-The robot first parks in queue slot `q1`, then at `gtp_1`. After the dispatch it
-delivers to `sort_1`, unloads for 4 s, returns to the queue and comes back to `gtp_1`
-on its own. To stop, press Ctrl + C in terminal 2, then in terminal 1.
+The fleet manager finds the robot parked in `q1` and calls it to `gtp_1`. After the
+dispatch it delivers to `sort_1`, unloads for 4 s, returns to the queue and comes back
+to `gtp_1` on its own. To stop, press Ctrl + C in terminal 2, then in terminal 1.
+
+`robots:=3` (the default) in steps 1 and 2 starts `amr_1`, `amr_2` and `amr_3` in `q1`,
+`q2` and `q3`, each with its own Nav2, 5 s apart. RViz shows `amr_1`;
+`rviz_robot:=amr_2` in step 1 shows another one.
 
 Measured in this simulation:
 
@@ -127,11 +132,11 @@ free slot (a slot it still holds counts as free). Every other place it held is f
 the robot is `clearance_m` (1 m) away. A reset is refused when the robot is not in
 `ERROR` (`nothing to reset`).
 
-To try it in Quick start 2, make the next leg fail by cancelling its docking goal. This
-loop cancels the first docking goal it finds, then stops:
+To try it in Quick start 2, make the next leg of `amr_1` fail by cancelling its docking
+goal. This loop cancels the first docking goal it finds, then stops:
 
 ```bash
-until ros2 service call /dock_robot/_action/cancel_goal action_msgs/srv/CancelGoal "{}" | grep -F "goals_canceling=[a"; do sleep 1; done
+until ros2 service call /amr_1/dock_robot/_action/cancel_goal action_msgs/srv/CancelGoal "{}" | grep -F "goals_canceling=[a"; do sleep 1; done
 ```
 
 ## Tests

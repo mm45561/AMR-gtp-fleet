@@ -116,7 +116,9 @@ tag's pose.
 ## 6. Scaling from 3 to 10+ robots
 
 - **Namespaces everywhere.** Each robot runs its full stack under `/amr_N`, including
-  Nav2 with `/tf` → `tf` remapping, so robots never see each other's transforms.
+  Nav2 with `/tf` → `tf` remapping, so robots never see each other's transforms. The
+  simulation already works this way: its Gazebo topics, bridge, Nav2, tag reader and
+  task executor all live under `/amr_N` (`amr_bringup sim.launch.py`).
 - **Discovery across machines.** `ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST` is fine on
   one laptop but blocks a real fleet. Use `SUBNET` with a shared `ROS_DOMAIN_ID`.
   Past about 5 robots on Wi-Fi, switch to a Fast DDS discovery server or `rmw_zenoh`.

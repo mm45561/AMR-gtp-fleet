@@ -1,10 +1,7 @@
-# Gazebo <-> ROS 2 topics for one AMR
-- ros_topic_name: clock
-  gz_topic_name: clock
-  ros_type_name: rosgraph_msgs/msg/Clock
-  gz_type_name: gz.msgs.Clock
-  direction: GZ_TO_ROS
-
+# Gazebo <-> ROS 2 topics of ONE AMR. robot.launch.py starts one bridge per robot in
+# the robot's namespace with expand_gz_topic_names, so both sides of every entry become
+# /<namespace>/<name>: the topics amr.urdf.xacro gives that robot in Gazebo.
+# /clock is shared by all robots and bridged once, in sim.launch.py.
 - ros_topic_name: cmd_vel
   gz_topic_name: cmd_vel
   ros_type_name: geometry_msgs/msg/TwistStamped
@@ -34,7 +31,6 @@
   ros_type_name: sensor_msgs/msg/LaserScan
   gz_type_name: gz.msgs.LaserScan
   direction: GZ_TO_ROS
-
 
 - ros_topic_name: camera/image_raw
   gz_topic_name: camera/image

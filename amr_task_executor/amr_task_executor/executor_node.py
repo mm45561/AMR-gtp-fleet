@@ -45,9 +45,9 @@ class ExecutorNode(Node):
         self._unload_time = self.declare_parameter('unload_time_s', 4.0).value
         self._map_frame = self.declare_parameter('map_frame', 'map').value
         self._base_frame = self.declare_parameter('base_frame', 'base_link').value
-        # absolute name: in the simulation Nav2 runs without a namespace
-        dock_action = self.declare_parameter('dock_action', '/dock_robot').value
-        cmd_vel_topic = self.declare_parameter('cmd_vel_topic', '/cmd_vel').value
+        # relative names: the executor runs in its robot's namespace, next to its Nav2
+        dock_action = self.declare_parameter('dock_action', 'dock_robot').value
+        cmd_vel_topic = self.declare_parameter('cmd_vel_topic', 'cmd_vel').value
 
         self._lock = threading.Lock()   # the action thread and the timer share the data
         self._sm = MissionStateMachine()

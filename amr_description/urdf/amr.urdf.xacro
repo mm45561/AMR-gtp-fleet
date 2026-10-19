@@ -10,6 +10,11 @@
 
   <xacro:property name="mesh_dir" value="file://$(find amr_description)/meshes/mir"/>
 
+  <!-- The robot's name. Its Gazebo topics are /<namespace>/cmd_vel, /<namespace>/scan, ...
+       so several AMRs can share one world: xacro amr.urdf.xacro namespace:=amr_2 -->
+  <xacro:arg name="namespace" default="amr_1"/>
+  <xacro:property name="ns" value="$(arg namespace)"/>
+
   <!-- ========== Dimensions (metres, kg), measured from the MiR100 meshes ========== -->
   <xacro:property name="base_mass" value="58.0"/>
   <xacro:property name="body_length" value="0.898"/>
@@ -266,7 +271,7 @@
   <!-- Front camera: 640x480 at 15 Hz, wide lens; draws nothing beyond 2 m -->
   <gazebo reference="camera_link">
     <sensor name="floor_camera" type="camera">
-      <topic>camera/image</topic>
+      <topic>/${ns}/camera/image</topic>
       <gz_frame_id>camera_optical_link</gz_frame_id>
       <update_rate>15</update_rate>
       <always_on>true</always_on>

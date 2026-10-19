@@ -3,7 +3,7 @@
 <package format="3">
   <name>amr_gazebo</name>
   <version>0.0.0</version>
-  <description>TODO: Package description</description>
+  <description>Warehouse world with floor AprilTags and its map; launch files that start the world and add one AMR</description>
   <maintainer email="61me38@gmail.com">Mohamed abdo</maintainer>
   <license>Apache-2.0</license>
 

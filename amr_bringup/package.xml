@@ -3,16 +3,19 @@
 <package format="3">
   <name>amr_bringup</name>
   <version>0.0.0</version>
-  <description>Launch files that start the fleet side: task executors and the fleet manager</description>
+  <description>Launch files: the simulated AMRs with their Nav2, and the fleet side (task executors and fleet manager)</description>
   <maintainer email="61me38@gmail.com">Mohamed abdo</maintainer>
   <license>Apache-2.0</license>
 
     <buildtool_depend>ament_cmake</buildtool_depend>
 
   <exec_depend>amr_fleet_manager</exec_depend>
+  <exec_depend>amr_gazebo</exec_depend>
+  <exec_depend>amr_navigation</exec_depend>
   <exec_depend>amr_task_executor</exec_depend>
   <exec_depend>launch</exec_depend>
   <exec_depend>launch_ros</exec_depend>
+  <exec_depend>rviz2</exec_depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
