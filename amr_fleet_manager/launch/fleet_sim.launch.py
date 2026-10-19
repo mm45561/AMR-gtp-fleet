@@ -9,9 +9,9 @@ from launch_ros.actions import Node
 # One entry per simulated robot: (namespace, initial pose [x, y, yaw]).
 # The poses are the queue slots of config/site.yaml.
 ROBOTS = [
-    ('amr_1', [-2.0, 1.5, 0.0]),
-    ('amr_2', [-2.0, 0.5, 0.0]),
-    ('amr_3', [-2.0, -0.5, 0.0]),
+    ('amr_1', [-4.88, -0.03, 0.0]),    # q1
+    ('amr_2', [-4.91, -2.05, 0.0]),    # q2
+    ('amr_3', [-4.82, -4.13, 0.0]),    # q3
 ]
 
 

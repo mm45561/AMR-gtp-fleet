@@ -61,7 +61,7 @@ ros2 launch amr_fleet_manager fleet_sim.launch.py
 ```
 
 The fleet manager immediately calls the nearest parked robot (`amr_1`) to `gtp_1`.
-After about 10 s it reports `DOCKED_AT_GTP`. Then, in a second terminal:
+After about 20 s it reports `DOCKED_AT_GTP`. Then, in a second terminal:
 
 ```bash
 source ~/amr_ws/install/setup.bash
