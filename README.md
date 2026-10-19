@@ -9,6 +9,10 @@ picked items from a Goods-to-Person (GTP) pick station to a sorting / consolidat
       └─────────────────────────────────── return ───────────────────────────────────────────┘
 ```
 
+**Status:** one AMR runs the whole cycle in Gazebo under the fleet manager: it drives
+with Nav2 and parks on a floor AprilTag at every place. Next: one launch file for the
+fleet side, then three AMRs.
+
 Design details, the robot state list and the deadlock rules are in
 [docs/architecture.md](docs/architecture.md).
 
@@ -20,12 +24,13 @@ This repository is the `src/` folder of a colcon workspace (for example `~/amr_w
 |---|---|---|---|---|
 | `amr_interfaces` | ament_cmake | everywhere | ✅ done | The contract: messages, services and actions shared by all other packages |
 | `amr_fleet_manager` | ament_python | fleet server | ✅ done | Task allocation, dock / drop-off / queue reservations, mock AMR for testing |
-| `amr_task_executor` | ament_python | each robot | ⏳ next | Mission state machine; serves `execute_task` using Nav2 and the docking controller |
-| `amr_docking` | ament_cmake (C++) | each robot | ⏳ planned | Millimetre-level alignment beside the GTP station |
-| `amr_navigation` | ament_cmake (config only) | each robot | ⏳ planned | Nav2 parameters, maps, behavior trees |
-| `amr_description` | ament_cmake | each robot | ⏳ planned | URDF / xacro, sensors, Gazebo plugins |
+| `amr_task_executor` | ament_python | each robot | ✅ done | Mission state machine; serves `execute_task` with Nav2's docking server, then turns in place on the floor tag |
+| `amr_docking` | ament_python | each robot | ✅ done | Passes the pose of the AprilTag the camera sees to Nav2's docking server |
+| `amr_navigation` | ament_cmake (config only) | each robot | ✅ done | Nav2 parameters (AMCL, MPPI inside a rotation shim, docking server), bringup launch, RViz layout |
+| `amr_description` | ament_cmake | each robot | ✅ done | URDF / xacro of the AMR: LiDAR, front camera, Gazebo plugins |
+| `amr_gazebo` | ament_cmake | simulation | ✅ done | Warehouse world with floor AprilTags, map, robot spawn, ROS ⇄ Gazebo bridge |
+| `amr_bringup` | ament_cmake | both | ⏳ next | Launch files: the fleet server with the robot executors, then a multi-robot Gazebo world |
 | `amr_hardware_interface` | ament_cmake (C++) | each robot | ⏳ planned | ros2_control diff-drive, battery, e-stop, bin sensors |
-| `amr_bringup` | ament_cmake | both | ⏳ planned | Launch files: one namespaced robot, the fleet server, a multi-robot Gazebo world |
 | `amr_station_hmi` | ament_python | GTP station PC | ⏳ planned | Touchscreen / button that calls `/fleet/dispatch_amr` |
 
 Dependency rule: every package may depend on `amr_interfaces`, and no robot-side
@@ -40,13 +45,14 @@ the interfaces below, so either side can be replaced later (for example by Open-
 | `/<robot_id>/robot_state` | `amr_interfaces/msg/RobotState` | robot → fleet manager, ≥ 1 Hz (also the heartbeat) |
 | `/<robot_id>/execute_task` | `amr_interfaces/action/ExecuteTask` | fleet manager → robot, one goal per leg |
 
-## Quick start: simulated fleet, no Gazebo needed
+## Quick start 1: simulated fleet, no Gazebo needed
 
-Tested on ROS 2 Jazzy. The code only uses APIs available from Humble to Lyrical.
+Mock robots that only pretend to drive. Tested on ROS 2 Jazzy; the code only uses APIs
+available from Humble to Lyrical.
 
 ```bash
 mkdir -p ~/amr_ws
-git clone https://github.com/mm45561/me61.git ~/amr_ws/src
+git clone https://github.com/mm45561/AMR-gtp-fleet.git ~/amr_ws/src
 cd ~/amr_ws
 rosdep install --from-paths src --ignore-src -y
 colcon build --symlink-install
@@ -66,12 +72,44 @@ ros2 service call /fleet/dispatch_amr amr_interfaces/srv/DispatchAmr "{station_i
 `amr_1` drives to `sort_1`. As soon as it is 1 m clear of the dock, `amr_2` is called
 to replace it. `amr_1` unloads and then returns to a free queue slot.
 
+## Quick start 2: one AMR in Gazebo, full cycle
+
+Tested on Ubuntu 26.04 with ROS 2 Lyrical, Gazebo Jetty, Nav2 and `apriltag_ros`.
+Start each step only when the previous one prints the line shown.
+
+| Step | Terminal | Command | Wait for |
+|---|---|---|---|
+| 1 | 1 | `ros2 launch amr_navigation bringup.launch.py` | the map in RViz, then 40 s more |
+| 2 | 2 | `ros2 run amr_task_executor executor --ros-args -r __ns:=/amr_1 -p use_sim_time:=true` | `amr_1 executor ready (IDLE)` |
+| 3 | 3 | `ros2 run amr_fleet_manager fleet_manager --ros-args -r __ns:=/fleet -p site_config_file:=$HOME/amr_ws/install/amr_fleet_manager/share/amr_fleet_manager/config/site.yaml -p use_sim_time:=true` | `finished GO_TO_STATION at gtp_1` |
+| 4 | 4 | `ros2 service call /fleet/dispatch_amr amr_interfaces/srv/DispatchAmr "{station_id: gtp_1}"` | `finished DELIVER at sort_1` |
+
+The robot first parks in queue slot `q1`, then at `gtp_1`. After the dispatch it
+delivers to `sort_1`, unloads for 4 s, returns to the queue and comes back to `gtp_1`
+on its own. To stop, press Ctrl + C in the reverse order: terminal 3, then 2, then 1.
+
+Measured in this simulation:
+
+| What | Result |
+|---|---|
+| Docking | 5 of 5 places in a full cycle, no retries |
+| Final position on the tag | about 1 cm, heading under 0.3° |
+| AMCL error at `gtp_1` | 2–4 cm |
+| One cycle (dispatch → back at `gtp_1`) | about 2.5 min |
+
 ## Tests
 
 ```bash
 cd ~/amr_ws
-colcon test --packages-select amr_fleet_manager && colcon test-result --verbose
+colcon test --packages-select amr_fleet_manager amr_task_executor && colcon test-result --verbose
 ```
 
 The allocation logic does not import ROS, so its tests also run on their own:
 `cd ~/amr_ws/src/amr_fleet_manager && python3 -m pytest test/test_fleet_core.py`.
+
+## Roadmap
+
+1. `amr_bringup`: start the executor and the fleet manager with one launch file.
+2. A reset for a robot in `ERROR`, instead of restarting the executor and the fleet manager.
+3. Three AMRs in one Gazebo world, each with its own namespace, Nav2 and tag reader.
+4. `amr_station_hmi`, then `amr_hardware_interface` for a real robot.

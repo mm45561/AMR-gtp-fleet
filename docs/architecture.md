@@ -21,7 +21,7 @@ flowchart LR
 - The **fleet manager** decides *who goes where and when*. It never touches Nav2,
   the map or the motors.
 - The robot's **task executor** decides *how* to do one leg (undock, plan, drive,
-  dock, wait for the operator). `mock_amr` stands in for it until it exists.
+  dock, wait for the operator). `mock_amr` stands in for it in tests without Gazebo.
 - One action goal = one leg of the cycle (`GO_TO_STATION`, `DELIVER`,
   `RETURN_TO_QUEUE`). Short goals keep the fleet manager in control between legs,
   so it can choose the return slot at the moment the robot actually needs it.
@@ -105,9 +105,10 @@ anywhere else is sent back to the queue.
 | **Jazzy** | May 2029 | Recommended for the robots |
 | Lyrical | May 2031 | Fine (newest LTS, on Ubuntu 26.04) |
 
-The code in this repository is tested on Jazzy and avoids APIs newer than Humble.
-Jazzy and later also ship Nav2's docking server (`opennav_docking`), which is the
-starting point for `amr_docking`.
+The fleet manager and the mock robots are tested on Jazzy and avoid APIs newer than
+Humble. The Gazebo simulation runs on Lyrical: the robots park with Nav2's docking
+server (`opennav_docking`, Jazzy and later), which `amr_docking` feeds with the floor
+tag's pose.
 
 ## 6. Scaling from 3 to 10+ robots
 
@@ -124,8 +125,6 @@ starting point for `amr_docking`.
 
 ## 7. Known gaps (next steps)
 
-- Robot-side task executor with a real state machine (deliverable 2).
-- Precision docking controller (deliverable 4).
 - If a robot reboots in the middle of a task, its goal is lost. Compare
   `RobotState.task_id` with the active task, and fail the task when they disagree for
   longer than the heartbeat timeout.
