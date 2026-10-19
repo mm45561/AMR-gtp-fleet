@@ -60,8 +60,11 @@ source install/setup.bash
 ros2 launch amr_fleet_manager fleet_sim.launch.py
 ```
 
-The fleet manager immediately calls the nearest parked robot (`amr_1`) to `gtp_1`.
-After about 20 s it reports `DOCKED_AT_GTP`. Then, in a second terminal:
+The fleet manager finds the robots in queue slots `q1`–`q3` and calls one to `gtp_1`:
+the nearest of those that have already reported, so usually `amr_1`, but whichever
+mock starts first if it is alone (the log line `-> GO_TO_STATION gtp_1` names it).
+About 20 s later the log says `finished GO_TO_STATION at gtp_1`. Then, in a second
+terminal (use the robot named in the log):
 
 ```bash
 source ~/amr_ws/install/setup.bash
@@ -69,8 +72,8 @@ ros2 topic echo /amr_1/robot_state --field state      # 3 = DOCKED_AT_GTP
 ros2 service call /fleet/dispatch_amr amr_interfaces/srv/DispatchAmr "{station_id: gtp_1}"
 ```
 
-`amr_1` drives to `sort_1`. As soon as it is 1 m clear of the dock, `amr_2` is called
-to replace it. `amr_1` unloads and then returns to a free queue slot.
+The robot drives to `sort_1`. As soon as it is 1 m clear of the dock, the next robot is
+called to replace it. The first one unloads and then returns to a free queue slot.
 
 ## Quick start 2: one AMR in Gazebo, full cycle
 
