@@ -620,9 +620,9 @@ docking_server:
       use_collision_detection: true
       costmap_topic: "local_costmap/costmap_raw"
       footprint_topic: "local_costmap/published_footprint"
-      transform_tolerance: 0.3
+      transform_tolerance: 0.3            # 0.1 s aborted a docking (error 905) when TF came late
       projection_time: 5.0
-      simulation_step: 0.1
+      simulation_time_step: 0.1
       dock_collision_threshold: 0.3
 
 loopback_simulator:
