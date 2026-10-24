@@ -4,7 +4,12 @@
 
 ```mermaid
 flowchart LR
-    HMI["GTP station HMI<br/>(touchscreen / button)"] -- "/fleet/dispatch_amr (srv)" --> FMS
+    subgraph "GTP station"
+        HMI["FUXA screen<br/>(lamps, robots, DISPATCH)"] -- "Modbus TCP" --> PLC["station PLC<br/>(OpenPLC, station.st)"]
+        BR["plc_bridge"] -- "Modbus TCP" --> PLC
+    end
+    BR -- "/fleet/dispatch_amr (srv)" --> FMS
+    FMS -- "/fleet/state (topic)" --> BR
     subgraph Server
         FMS["fleet_manager<br/>FleetCore + ROS shell"]
     end
@@ -20,6 +25,8 @@ flowchart LR
 
 - The **fleet manager** decides *who goes where and when*. It never touches Nav2,
   the map or the motors.
+- The **station PLC** decides *whether the robot at the station may leave*: the
+  DISPATCH button and the lamps are its I/O, and the screen and ROS only ask (section 5).
 - The robot's **task executor** decides *how* to do one leg (undock, plan, drive,
   dock, wait for the operator). `mock_amr` stands in for it in tests without Gazebo.
 - One action goal = one leg of the cycle (`GO_TO_STATION`, `DELIVER`,
@@ -36,7 +43,7 @@ sequenceDiagram
     participant B as amr_2
     F->>A: GO_TO_STATION gtp_1 (dock reserved for amr_1)
     A-->>F: success (state DOCKED_AT_GTP)
-    Op->>F: dispatch_amr(gtp_1)
+    Op->>F: DISPATCH at gtp_1 (station PLC → plc_bridge → dispatch_amr)
     F->>A: DELIVER sort_1 (drop-off reserved for amr_1)
     Note over A: 1 m clear of the dock, so the dock reservation is released
     F->>B: GO_TO_STATION gtp_1
@@ -104,7 +111,57 @@ anywhere else is sent back to the queue.
 happens to report first would be called to the station, even when another is nearer.
 A robot that never reports is left out, with a warning.
 
-## 5. ROS 2 distribution
+## 5. The GTP station: PLC and HMI
+
+On a real line the DISPATCH button and the lamps are wired to a PLC, and the decision
+"may the robot at the station leave now?" belongs there, not in a screen or a ROS node.
+The station works the same way here, with OpenPLC standing in for the hardware PLC:
+
+- `amr_station_plc/station.st` (IEC 61131-3 Structured Text) runs in OpenPLC every
+  50 ms. It owns the button, the lamps and the dispatch request.
+- The FUXA screen (`amr_station_plc/gtp_station_fuxa.json`) only reads the PLC and, for
+  the DISPATCH button, writes 1 to one register. A real push button on `%IX0.0` does the
+  same.
+- `amr_plc_bridge` is the only part that talks to ROS. Every 0.5 s it writes the
+  station's state from `/fleet/state` into the PLC and reads the PLC's dispatch request.
+
+**Three rules in `station.st`:**
+
+1. *Interlock.* A press only becomes a request when an AMR is docked and ready
+   (`station_ready = 1`), the ROS link is alive, and no request is pending. One press
+   is one request (rising edge), however long the button is held. A press that fails
+   these checks is dropped by the PLC and never reaches ROS.
+2. *Handshake.* The PLC sets `dispatch_request = 1`. The bridge calls
+   `/fleet/dispatch_amr` once, writes the answer to `dispatch_result` (1 accepted,
+   2 rejected) and then clears the request. The PLC accepts no new press until then.
+3. *Watchdog.* The bridge counts `ros_heartbeat` up only while `/fleet/state` is fresh
+   (under 2 s old). If the heartbeat stops changing for 2 s, the PLC drops the link:
+   ROS LINK goes off and DISPATCH is blocked. A crashed bridge and a silent fleet
+   manager look the same to the PLC, which is the point.
+
+**Register map.** In OpenPLC, memory word `%MWn` is Modbus holding register 1024 + n and
+`%QX0.n` is coil n. FUXA numbers Modbus addresses from 1, so its address is one more.
+
+| PLC | Modbus | FUXA | Written by | Meaning |
+|---|---|---|---|---|
+| `%MW0` | HR 1024 | 1025 | bridge | `ros_heartbeat`, counts 0..999 |
+| `%MW1` | HR 1025 | 1026 | bridge | `station_ready`: 1 = an AMR is docked at `gtp_1` and may leave |
+| `%MW2` | HR 1026 | 1027 | bridge | `docked_robot`: 1..3 = `amr_1`..`amr_3` holds the dock, 0 = none |
+| `%MW3`–`%MW5` | HR 1027–1029 | 1028–1030 | bridge | `RobotState.state` of `amr_1`..`amr_3` |
+| `%MW6`–`%MW8` | HR 1030–1032 | 1031–1033 | bridge | robot status: 0 offline, 1 ok, 2 faulted |
+| `%MW9` | HR 1033 | 1034 | bridge | `dispatch_result`: 0 none, 1 accepted, 2 rejected |
+| `%MW10` | HR 1034 | 1035 | screen | `hmi_button`: the screen writes 1, the PLC reads and clears it |
+| `%MW11` | HR 1035 | 1036 | PLC, cleared by the bridge | `dispatch_request` |
+| `%IX0.0` | input 0 | 1 | push button | `field_button`, same as `hmi_button` |
+| `%QX0.0` | coil 0 | 1 | PLC | `lamp_ready` (green): DISPATCH would be accepted |
+| `%QX0.1` | coil 1 | 2 | PLC | `lamp_busy` (yellow): a request is waiting for its answer |
+| `%QX0.2` | coil 2 | 3 | PLC | `lamp_fault` (red): a robot is `ERROR` and needs `/amr_N/reset` |
+| `%QX0.3` | coil 3 | 4 | PLC | `lamp_link` (blue): the watchdog sees the heartbeat |
+
+The bridge's side of this table is `amr_plc_bridge/plc_map.py`, which has no ROS import
+and is tested with plain pytest.
+
+## 6. ROS 2 distribution
 
 | Distro | End of life | Verdict for a new project in late 2026 |
 |---|---|---|
@@ -118,7 +175,7 @@ Humble. The Gazebo simulation runs on Lyrical: the robots park with Nav2's docki
 server (`opennav_docking`, Jazzy and later), which `amr_docking` feeds with the floor
 tag's pose.
 
-## 6. Scaling from 3 to 10+ robots
+## 7. Scaling from 3 to 10+ robots
 
 - **Namespaces everywhere.** Each robot runs its full stack under `/amr_N`, including
   Nav2 with `/tf` → `tf` remapping, so robots never see each other's transforms. The
@@ -133,7 +190,7 @@ tag's pose.
   traffic negotiation, write an Open-RMF fleet adapter around the robots' `execute_task`
   instead of growing this fleet manager.
 
-## 7. Known gaps (next steps)
+## 8. Known gaps (next steps)
 
 - If a robot reboots in the middle of a task, its goal is lost. Compare
   `RobotState.task_id` with the active task, and fail the task when they disagree for
@@ -141,3 +198,10 @@ tag's pose.
 - No charging task: robots below `min_battery_percent` simply get no new work.
 - Queue slots must be side-by-side bays. A single-file lane would need "move up"
   tasks.
+- The task executor does not stop cleanly in the middle of a leg: `_wait()` waits for
+  the docking result without a timeout, so Ctrl + C leaves the process hanging until
+  `launch` kills it, and the Nav2 docking goal keeps the robot driving. On shutdown it
+  should cancel the goal and give up the wait.
+- The station PLC has registers for one station and three robots (`PLC_ROBOTS`).
+- OpenPLC's web page, FUXA and Modbus TCP have no real security here (default OpenPLC
+  login, Modbus has no authentication). Keep them on a closed network.

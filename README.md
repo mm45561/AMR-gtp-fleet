@@ -12,7 +12,10 @@ picked items from a Goods-to-Person (GTP) pick station to a sorting / consolidat
 **Status:** three AMRs run the GTP cycle together in Gazebo under the fleet manager. Each
 one drives with its own Nav2 under `/amr_N` and parks on a floor AprilTag at every place;
 when the docked robot leaves with a delivery, the next one is called to the station. A
-robot that fails waits for a person and goes back to work with one service call.
+robot that fails waits for a person and goes back to work with one service call. At the
+GTP station, a PLC program (OpenPLC) owns the DISPATCH button and the lamps, and a FUXA
+screen shows the station and the robots; `amr_plc_bridge` connects the PLC to the fleet
+manager over Modbus TCP.
 
 Design details, the robot state list and the deadlock rules are in
 [docs/architecture.md](docs/architecture.md).
@@ -30,9 +33,10 @@ This repository is the `src/` folder of a colcon workspace (for example `~/amr_w
 | `amr_navigation` | ament_cmake (config only) | each robot | ✅ done | Nav2 parameters (AMCL, MPPI inside a rotation shim, docking server), launch file for one robot's Nav2 and tag reader, RViz layout |
 | `amr_description` | ament_cmake | each robot | ✅ done | URDF / xacro of the AMR: LiDAR, front camera, Gazebo plugins; `namespace:=` puts its Gazebo topics under `/amr_N` |
 | `amr_gazebo` | ament_cmake | simulation | ✅ done | Warehouse world with floor AprilTags, map; launch file that adds one robot with its own ROS ⇄ Gazebo bridge |
-| `amr_bringup` | ament_cmake | both | ✅ done | `sim.launch.py`: Gazebo with 1–3 AMRs, each with its Nav2 under `/amr_N`; `fleet.launch.py`: one task executor per robot and the fleet manager |
+| `amr_bringup` | ament_cmake | both | ✅ done | `sim.launch.py`: Gazebo with 1–3 AMRs, each with its Nav2 under `/amr_N`; `fleet.launch.py`: one task executor per robot and the fleet manager (`plc:=true` adds the station PLC bridge) |
+| `amr_plc_bridge` | ament_python | GTP station PC | ✅ done | Modbus TCP bridge: writes the station's and robots' state into the station PLC, turns its DISPATCH requests into `/fleet/dispatch_amr` calls |
+| `amr_station_plc` | none (files, not a colcon package) | GTP station | ✅ done | `station.st`: the PLC program for OpenPLC (interlock, handshake, watchdog, lamps); `gtp_station_fuxa.json`: the FUXA project with the station screen |
 | `amr_hardware_interface` | ament_cmake (C++) | each robot | ⏳ planned | ros2_control diff-drive, battery, e-stop, bin sensors |
-| `amr_station_hmi` | ament_python | GTP station PC | ⏳ planned | Touchscreen / button that calls `/fleet/dispatch_amr` |
 
 Dependency rule: every package may depend on `amr_interfaces`, and no robot-side
 package depends on `amr_fleet_manager`. Robots and the fleet manager only talk through
@@ -42,11 +46,13 @@ the interfaces below, so either side can be replaced later (for example by Open-
 
 | Name | Type | Direction |
 |---|---|---|
-| `/fleet/dispatch_amr` | `amr_interfaces/srv/DispatchAmr` | station HMI → fleet manager |
+| `/fleet/dispatch_amr` | `amr_interfaces/srv/DispatchAmr` | station (`plc_bridge`) → fleet manager |
 | `/<robot_id>/robot_state` | `amr_interfaces/msg/RobotState` | robot → fleet manager, ≥ 1 Hz (also the heartbeat) |
 | `/<robot_id>/execute_task` | `amr_interfaces/action/ExecuteTask` | fleet manager → robot, one goal per leg |
 | `/<robot_id>/reset` | `std_srvs/srv/Trigger` | person on the floor → robot, after a failure is cleared |
-| `/fleet/state` | `amr_interfaces/msg/FleetState` | fleet manager → station HMI, every tick: who holds each GTP dock, whether DISPATCH would work, every robot's state |
+| `/fleet/state` | `amr_interfaces/msg/FleetState` | fleet manager → station (`plc_bridge`), every tick: who holds each GTP dock, whether DISPATCH would work, every robot's state |
+
+The station PLC's Modbus register map is in [docs/architecture.md](docs/architecture.md#5-the-gtp-station-plc-and-hmi).
 
 ## Quick start 1: simulated fleet, no Gazebo needed
 
@@ -114,6 +120,92 @@ Measured in this simulation:
 | Three AMRs: Gazebo real-time factor | 99.5 % (RTX 3060) |
 | Three AMRs: handoff at `gtp_1` | the next robot is called once the leaving one is 1 m clear |
 
+## Quick start 3: the GTP station (PLC and screen)
+
+The station's DISPATCH button and lamps live in a PLC, as on a real line. The screen
+only asks; the PLC decides (interlock, handshake and watchdog are explained in
+[docs/architecture.md](docs/architecture.md#5-the-gtp-station-plc-and-hmi)).
+
+```
+ FUXA screen ──Modbus──► OpenPLC (station.st) ◄──Modbus── plc_bridge ──► /fleet/dispatch_amr
+ lamps, robots ◄───────────── station state ◄──────────────────────────── /fleet/state
+```
+
+Tested on Ubuntu 26.04 with Docker, OpenPLC v3 and FUXA 1.3.5.
+
+**One-time setup**
+
+1. Docker and the Modbus library of the bridge, then log out and in again so the
+   `docker` group applies:
+
+   ```bash
+   sudo apt install -y docker.io docker-buildx python3-pymodbus
+   sudo usermod -aG docker $USER
+   ```
+
+2. OpenPLC, built from source (a few minutes):
+
+   ```bash
+   git clone https://github.com/thiagoralves/OpenPLC_v3.git ~/OpenPLC_v3
+   cd ~/OpenPLC_v3 && docker build -t openplc:v3 .
+   docker run -d --name openplc --network host --privileged -v openplc_data:/docker_persistent openplc:v3
+   ```
+
+3. The PLC program: open http://localhost:8080 (user `openplc`, password `openplc`),
+   Programs → Upload Program → `amr_station_plc/station.st`. If the compile page stays
+   white, compile the newest upload in the container, then press Stop PLC and Start PLC:
+
+   ```bash
+   docker exec -w /workdir/webserver openplc ./scripts/compile_program.sh $(docker exec openplc ls -t /docker_persistent/st_files | head -1)
+   ```
+
+   The page shows `Running`. Modbus TCP on port 502 is on by default (Settings).
+
+4. FUXA:
+
+   ```bash
+   docker run -d --name fuxa --network host -v fuxa_appdata:/usr/src/app/FUXA/server/_appdata -v fuxa_db:/usr/src/app/FUXA/server/_db -v fuxa_logs:/usr/src/app/FUXA/server/_logs -v fuxa_images:/usr/src/app/FUXA/server/_images frangoteam/fuxa:latest
+   ```
+
+   Modbus is a plugin in FUXA: install **Modbus** at http://localhost:1881/plugins. Then
+   open http://localhost:1881/editor, click the save icon (top left) → Open Project →
+   `amr_station_plc/gtp_station_fuxa.json`. This replaces FUXA's project with the
+   OpenPLC device (`127.0.0.1:502`, slave 1), its 10 tags and the station screen.
+
+After a reboot: `docker start openplc fuxa`, then Start PLC on the OpenPLC page (or tick
+"Start OpenPLC in RUN mode" in its Settings once).
+
+**Run**
+
+| Step | Terminal | Command | Wait for |
+|---|---|---|---|
+| 1 | 1 | `ros2 launch amr_bringup sim.launch.py` | the map in RViz, then 60 s more |
+| 2 | 2 | `ros2 launch amr_bringup fleet.launch.py plc:=true` | `finished GO_TO_STATION at gtp_1` |
+| 3 | browser | http://localhost:1881/home | READY green, DISPATCH button green |
+| 4 | browser | click DISPATCH | `DISPATCH pressed at gtp_1`, then `dispatch accepted` in terminal 2 |
+
+`plc:=true` starts `plc_bridge` next to the fleet manager. With Quick start 1 instead of
+Gazebo, start the bridge in its own terminal: `ros2 run amr_plc_bridge plc_bridge`.
+
+The screen shows the four lamps of `station.st`, the robot holding the dock, the last
+dispatch result and the state of every robot. DISPATCH is green while the PLC would
+accept a press.
+
+Checked so far:
+
+| What | Result |
+|---|---|
+| DISPATCH from the screen, three AMRs in Gazebo | every press with a green button accepted, over several cycles; the next robot is called as in Quick start 2 |
+| 3 presses while the button is gray (Quick start 1, the next robot still on its way) | all dropped by the PLC, none reached ROS |
+| Fleet manager stopped (Ctrl + C in terminal 2) | ROS LINK goes off within a few seconds and DISPATCH is blocked |
+
+To change the screen, edit it in the FUXA editor, then save icon → Save Project As... and
+copy the downloaded file over `amr_station_plc/gtp_station_fuxa.json`.
+
+With `--network host`, the OpenPLC page (8080), FUXA (1881) and Modbus TCP (502) can be
+reached from your local network, and Modbus has no password. Change the OpenPLC login,
+and on a shared network stop them when you do not need them: `docker stop openplc fuxa`.
+
 ## When a robot fails
 
 A robot that cannot finish a leg (blocked path, tag not found, docking cancelled) goes
@@ -148,13 +240,15 @@ until ros2 service call /amr_1/dock_robot/_action/cancel_goal action_msgs/srv/Ca
 
 ```bash
 cd ~/amr_ws
-colcon test --packages-select amr_fleet_manager amr_task_executor && colcon test-result --verbose
+colcon test --packages-select amr_fleet_manager amr_task_executor amr_plc_bridge && colcon test-result --verbose
 ```
 
-The allocation logic does not import ROS, so its tests also run on their own:
-`cd ~/amr_ws/src/amr_fleet_manager && python3 -m pytest test/test_fleet_core.py`.
+The allocation logic and the PLC register map do not import ROS, so their tests also run
+on their own: `cd ~/amr_ws/src/amr_fleet_manager && python3 -m pytest test/test_fleet_core.py`,
+`cd ~/amr_ws/src/amr_plc_bridge && python3 -m pytest test/test_plc_map.py`.
 
 ## Roadmap
 
-1. `amr_station_hmi`: the station's touchscreen or button that calls `/fleet/dispatch_amr`.
+1. Task executor: stop cleanly in the middle of a leg (cancel the Nav2 docking goal and
+   stop waiting on shutdown; today `launch` has to kill it and the robot keeps driving).
 2. `amr_hardware_interface` for a real robot.

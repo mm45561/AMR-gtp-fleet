@@ -3,7 +3,8 @@ Start the fleet side: one task executor per robot, and the fleet manager.
 
 Run it once the robots' Nav2 is up (amr_bringup sim.launch.py, map shown in RViz),
 with the same robots:= (default 3): the fleet manager gives a robot its first task as
-soon as that robot reports a pose.
+soon as that robot reports a pose. plc:=true also starts the bridge to the GTP station
+PLC (OpenPLC must be running, see the README).
 """
 
 import os
@@ -16,7 +17,7 @@ from launch_ros.actions import Node
 
 
 def start_fleet(context):
-    """Start the executors of amr_1 ... amr_N and the fleet manager for all of them."""
+    """Start the executors of amr_1 ... amr_N, the fleet manager and maybe the PLC bridge."""
     count = int(LaunchConfiguration('robots').perform(context))
     robot_ids = [f'amr_{number}' for number in range(1, count + 1)]
     config_dir = os.path.join(get_package_share_directory('amr_fleet_manager'), 'config')
@@ -53,11 +54,23 @@ def start_fleet(context):
         ],
     )
 
-    return [*executors, fleet_manager]
+    # 3. On request, the bridge to the station PLC: the station's lamps and DISPATCH
+    #    button. It runs on wall time, like the PLC's watchdog it feeds.
+    if LaunchConfiguration('plc').perform(context).lower() != 'true':
+        return [*executors, fleet_manager]
+    plc_bridge = Node(
+        package='amr_plc_bridge',
+        executable='plc_bridge',
+        output='screen',
+        parameters=[{'robot_ids': robot_ids}],
+    )
+    return [*executors, fleet_manager, plc_bridge]
 
 
 def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument('robots', default_value='3', description='Number of AMRs'),
+        DeclareLaunchArgument('plc', default_value='false',
+                              description='Also start the bridge to the station PLC'),
         OpaqueFunction(function=start_fleet),
     ])
