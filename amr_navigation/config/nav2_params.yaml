@@ -620,7 +620,7 @@ docking_server:
       use_collision_detection: true
       costmap_topic: "local_costmap/costmap_raw"
       footprint_topic: "local_costmap/published_footprint"
-      transform_tolerance: 0.1
+      transform_tolerance: 0.3
       projection_time: 5.0
       simulation_step: 0.1
       dock_collision_threshold: 0.3
