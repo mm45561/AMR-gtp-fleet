@@ -80,7 +80,7 @@ def test_nearest_parked_robot_is_called_to_the_free_dock():
 
 
 def test_longest_idle_policy():
-    sim = FleetSim(selection_policy='longest_idle')
+    sim = FleetSim(selection_policy='longest_idle', startup_wait_s=0.0)   # amr_2 stays silent
     sim.report('amr_3', S.IDLE, *SLOTS['amr_3'])
     sim.now = 1.0
     sim.report('amr_1', S.IDLE, *SLOTS['amr_1'])
@@ -264,6 +264,24 @@ def test_reset_robot_standing_on_its_slot_is_found_there():
     sim.report('amr_1', S.IDLE, -2.0, 1.2)          # reset
     sim.tick()
     assert sim.core.robot('amr_1').anchor == 'slot:q1'
+
+
+def test_work_waits_until_every_robot_has_reported():
+    sim = FleetSim(startup_wait_s=10.0)
+    sim.report('amr_3', S.IDLE, -2.0, -1.0)          # amr_3 reports first, from q3
+    assert sim.tick() == []                         # the nearest may not have reported yet
+    sim.park_all()
+    task = only(sim.tick())
+    assert (task.robot_id, task.target_id) == ('amr_1', 'gtp_1')   # the nearest, not the first
+
+
+def test_work_starts_after_the_wait_without_a_silent_robot():
+    sim = FleetSim(startup_wait_s=10.0)
+    sim.report('amr_2', S.IDLE, -2.0, 0.0)
+    sim.report('amr_3', S.IDLE, -2.0, -1.0)          # amr_1 never reports
+    assert [sim.tick() for _ in range(20)] == [[]] * 20     # 0.5 s to 10 s
+    task = only(sim.tick())                         # 10.5 s: start without amr_1
+    assert (task.robot_id, task.target_id) == ('amr_2', 'gtp_1')
 
 
 def test_invalid_configuration_is_rejected():

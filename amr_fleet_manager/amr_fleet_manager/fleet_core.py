@@ -102,6 +102,7 @@ class FleetConfig:
     clearance_m: float = 1.0            # distance that frees the place a robot left
     match_tolerance_m: float = 0.5      # how close counts as 'parked at' a slot or dock
     retry_cooldown_s: float = 5.0       # pause before offering work to a robot that refused
+    startup_wait_s: float = 10.0        # at start, wait this long for every robot to report
 
 
 @dataclass(frozen=True)
@@ -140,6 +141,8 @@ class FleetCore:
         self._tasks: dict[str, Task] = {}
         self._pending: list[Task] = []
         self._outbox: list[Task] = []
+        self._started_at: float | None = None   # time of the first tick
+        self._starting = True                   # no work until every robot has reported
 
     # ------------------------------------------------------------------ views
 
@@ -221,6 +224,8 @@ class FleetCore:
         self._check_heartbeats(now)
         self._release_cleared_places()
         self._adopt_unplaced_robots()
+        if self._still_starting(now):
+            return      # no work yet: a robot that reports late may be the nearest one
         self._send_finished_robots_home(now)
         self._start_pending_tasks()
         self._replenish_stations(now)
@@ -286,6 +291,23 @@ class FleetCore:
                 if distance > self._cfg.clearance_m:
                     self._reservations.release(resource, robot.robot_id)
                     self._log.info(f'{robot.robot_id} has cleared {resource}')
+
+    def _still_starting(self, now: float) -> bool:
+        """Return True while waiting at start for every robot to report (or for the timeout)."""
+        if not self._starting:
+            return False
+        if self._started_at is None:
+            self._started_at = now
+        missing = [robot.robot_id for robot in self._robots.values() if robot.pose is None]
+        if missing and now - self._started_at < self._cfg.startup_wait_s:
+            return True
+        self._starting = False
+        if missing:
+            self._log.warning(f'{missing} did not report within {self._cfg.startup_wait_s} s; '
+                              'work starts without them')
+        else:
+            self._log.info(f'all {len(self._robots)} robots reported; work starts')
+        return False
 
     def _adopt_unplaced_robots(self) -> None:
         """Claim the slot or dock a robot is already at (e.g. after a fleet manager restart)."""

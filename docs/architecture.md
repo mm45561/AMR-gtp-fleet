@@ -99,6 +99,11 @@ A better `nearest` would ask Nav2's `ComputePathToPose` for the real path length
 claims the slot or dock it is standing at (`match_tolerance_m`). An IDLE robot found
 anywhere else is sent back to the queue.
 
+**Startup wait.** At start the fleet manager gives out no work until every robot in
+`robot_ids` has reported once, or `startup_wait_s` has passed. Otherwise the robot that
+happens to report first would be called to the station, even when another is nearer.
+A robot that never reports is left out, with a warning.
+
 ## 5. ROS 2 distribution
 
 | Distro | End of life | Verdict for a new project in late 2026 |
@@ -133,9 +138,6 @@ tag's pose.
 - If a robot reboots in the middle of a task, its goal is lost. Compare
   `RobotState.task_id` with the active task, and fail the task when they disagree for
   longer than the heartbeat timeout.
-- At start the fleet manager calls the nearest of the robots that have reported so
-  far; when one robot reports a moment before the others, it is called even if it
-  is not the nearest. A short startup wait (or "all robot_ids online") fixes this.
 - No charging task: robots below `min_battery_percent` simply get no new work.
 - Queue slots must be side-by-side bays. A single-file lane would need "move up"
   tasks.

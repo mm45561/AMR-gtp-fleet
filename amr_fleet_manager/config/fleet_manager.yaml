@@ -10,4 +10,5 @@
     clearance_m: 1.0
     match_tolerance_m: 0.5
     retry_cooldown_s: 5.0
+    startup_wait_s: 10.0                     # at start, wait this long for every robot to report
     tick_period_s: 0.5

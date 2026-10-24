@@ -62,11 +62,10 @@ source install/setup.bash
 ros2 launch amr_fleet_manager fleet_sim.launch.py
 ```
 
-The fleet manager finds the robots in queue slots `q1`–`q3` and calls one to `gtp_1`:
-the nearest of those that have already reported, so usually `amr_1`, but whichever
-mock starts first if it is alone (the log line `-> GO_TO_STATION gtp_1` names it).
-About 20 s later the log says `finished GO_TO_STATION at gtp_1`. Then, in a second
-terminal (use the robot named in the log):
+The fleet manager waits until all three mock robots have reported (`all 3 robots
+reported; work starts`, at most `startup_wait_s` = 10 s), finds them in queue slots
+`q1`–`q3` and calls the nearest one, `amr_1`, to `gtp_1`. About 20 s later the log says
+`finished GO_TO_STATION at gtp_1`. Then, in a second terminal:
 
 ```bash
 source ~/amr_ws/install/setup.bash
@@ -93,7 +92,8 @@ and `q3`; each robot's Nav2 and tag reader start under its namespace, 5 s apart.
 shows `amr_1` (`rviz_robot:=amr_2` shows another one). Step 2 starts the three task
 executors and the fleet manager.
 
-The fleet manager finds the robots parked and calls the nearest one to `gtp_1`. After the
+The fleet manager waits until every robot has reported (`all 3 robots reported; work
+starts`), finds them parked and calls the nearest one to `gtp_1`. After the
 dispatch that robot delivers to `sort_1`; as soon as it is 1 m clear of the dock, the
 next robot is called to the station. The first one unloads for 4 s and returns to a free
 queue slot. To stop, press Ctrl + C in terminal 2, then in terminal 1.
@@ -155,6 +155,5 @@ The allocation logic does not import ROS, so its tests also run on their own:
 
 ## Roadmap
 
-1. A short wait when the fleet manager starts, so it calls the nearest robot to the
-   station and not simply the first one that reports.
-2. `amr_station_hmi`, then `amr_hardware_interface` for a real robot.
+1. `amr_station_hmi`: the station's touchscreen or button that calls `/fleet/dispatch_amr`.
+2. `amr_hardware_interface` for a real robot.
