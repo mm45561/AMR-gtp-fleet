@@ -4,6 +4,7 @@ ROS 2 front end of FleetCore.
 Interfaces, for robots that each run in their own namespace (/amr_1, /amr_2, ...):
 
   service  /fleet/dispatch_amr       amr_interfaces/srv/DispatchAmr      (from the GTP HMI)
+  pub      /fleet/state              amr_interfaces/msg/FleetState       (to the HMI, every tick)
   sub      /<robot_id>/robot_state   amr_interfaces/msg/RobotState       (state + heartbeat)
   action   /<robot_id>/execute_task  amr_interfaces/action/ExecuteTask   (client, one per robot)
 
@@ -20,7 +21,7 @@ from amr_fleet_manager.fleet_core import FleetConfig, FleetCore, Task
 from amr_fleet_manager.geometry import Pose2D, quaternion_to_yaw, yaw_to_quaternion
 from amr_fleet_manager.site_map import load_site
 from amr_interfaces.action import ExecuteTask
-from amr_interfaces.msg import RobotState
+from amr_interfaces.msg import FleetRobot, FleetState, RobotState, StationState
 from amr_interfaces.srv import DispatchAmr
 import rclpy
 from rclpy.action import ActionClient
@@ -54,6 +55,7 @@ class FleetManagerNode(Node):
             self._goal_clients[robot_id] = ActionClient(self, ExecuteTask,
                                                         f'/{robot_id}/execute_task')
         self.create_service(DispatchAmr, 'dispatch_amr', self._on_dispatch)
+        self._state_pub = self.create_publisher(FleetState, 'state', 10)
         self.create_timer(tick_period, self._on_tick)
         self.get_logger().info(
             f'fleet manager up: robots={robot_ids}, stations={list(self._site.stations)}, '
@@ -91,6 +93,21 @@ class FleetManagerNode(Node):
     def _on_tick(self) -> None:
         self._core.tick(self._now())
         self._send_outbox()
+        self._publish_state()
+
+    def _publish_state(self) -> None:
+        """Publish the stations and robots for the station HMI (/fleet/state)."""
+        msg = FleetState()
+        msg.stations = [
+            StationState(station_id=station.station_id, robot_id=station.robot_id,
+                         ready=station.ready, status=station.status)
+            for station in self._core.stations_view()]
+        msg.robots = [
+            FleetRobot(robot_id=robot.robot_id, state=int(robot.state), online=robot.online,
+                       faulted=robot.faulted, task=robot.task,
+                       battery_percent=float(robot.battery_percent))
+            for robot in self._core.robots_view()]
+        self._state_pub.publish(msg)
 
     # ---------------------------------------------------------- goal sending
 

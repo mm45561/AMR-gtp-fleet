@@ -141,5 +141,3 @@ tag's pose.
 - No charging task: robots below `min_battery_percent` simply get no new work.
 - Queue slots must be side-by-side bays. A single-file lane would need "move up"
   tasks.
-- A `/fleet/state` topic for the HMI, for example to enable DISPATCH only when an AMR
-  is docked.

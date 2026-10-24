@@ -46,6 +46,7 @@ the interfaces below, so either side can be replaced later (for example by Open-
 | `/<robot_id>/robot_state` | `amr_interfaces/msg/RobotState` | robot → fleet manager, ≥ 1 Hz (also the heartbeat) |
 | `/<robot_id>/execute_task` | `amr_interfaces/action/ExecuteTask` | fleet manager → robot, one goal per leg |
 | `/<robot_id>/reset` | `std_srvs/srv/Trigger` | person on the floor → robot, after a failure is cleared |
+| `/fleet/state` | `amr_interfaces/msg/FleetState` | fleet manager → station HMI, every tick: who holds each GTP dock, whether DISPATCH would work, every robot's state |
 
 ## Quick start 1: simulated fleet, no Gazebo needed
 
