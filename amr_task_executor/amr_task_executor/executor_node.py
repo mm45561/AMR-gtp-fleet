@@ -7,6 +7,7 @@ the staging pose, then the docking controller parks on the floor tag.
 """
 
 import math
+import signal
 import threading
 import time
 
@@ -17,9 +18,11 @@ from geometry_msgs.msg import TwistStamped
 from nav2_msgs.action import DockRobot
 import rclpy
 from rclpy.action import ActionClient, ActionServer, CancelResponse, GoalResponse
+from rclpy.action.client import ClientGoalHandle
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import ExternalShutdownException, MultiThreadedExecutor
 from rclpy.node import Node
+from rclpy.signals import SignalHandlerOptions
 from rclpy.time import Time
 from std_srvs.srv import Trigger
 from tf2_ros import Buffer, TransformException, TransformListener
@@ -33,6 +36,10 @@ TASK_TRIGGERS = {
 
 # dock name -> id of its AprilTag on the floor (see amr_gazebo/worlds/warehouse.sdf)
 DOCK_TAGS = {'gtp_1': 0, 'sort_1': 1, 'q1': 2, 'q2': 3, 'q3': 4}
+
+
+class _Stopped(Exception):
+    """The node is shutting down: the task stops where it is."""
 
 
 class ExecutorNode(Node):
@@ -53,6 +60,8 @@ class ExecutorNode(Node):
         self._sm = MissionStateMachine()
         self._task_id = ''
         self._busy = False
+        self._stopping = threading.Event()      # set by stop(): every wait gives up
+        self._dock_goal: ClientGoalHandle | None = None   # in progress, stop() cancels it
 
         self._tf_buffer = Buffer()
         self._tf_listener = TransformListener(self._tf_buffer, self)
@@ -109,8 +118,14 @@ class ExecutorNode(Node):
             self._align_to_tag(goal.target_id)
             self._fire('arrived')
             if trigger == 'deliver':
-                time.sleep(self._unload_time)   # stands in for the worker unloading
+                if self._stopping.wait(self._unload_time):  # stands in for the worker unloading
+                    raise _Stopped()
                 self._fire('unloaded')
+        except _Stopped:
+            self.get_logger().warning(f'{goal.task_id}: stopped, the executor is shutting down')
+            goal_handle.abort()
+            result.message = 'the executor is shutting down'
+            return result
         finally:
             with self._lock:
                 self._busy = False
@@ -131,7 +146,19 @@ class ExecutorNode(Node):
         if not goal_handle.accepted:
             self.get_logger().error(f'docking server rejected {dock_id}')
             return False
-        result = self._wait(goal_handle.get_result_async()).result
+        with self._lock:    # from here on, stop() cancels this goal, or we do it here
+            stopping = self._stopping.is_set()
+            self._dock_goal = None if stopping else goal_handle
+        if stopping:
+            goal_handle.cancel_goal_async()
+            raise _Stopped()
+        try:
+            result = self._wait(goal_handle.get_result_async()).result
+        finally:
+            with self._lock:
+                self._dock_goal = None
+        if self._stopping.is_set():
+            raise _Stopped()    # cancelled by stop(), not a docking failure
         if not result.success:
             self.get_logger().error(
                 f'docking at {dock_id} failed: error {result.error_code} {result.error_msg}')
@@ -143,22 +170,27 @@ class ExecutorNode(Node):
             return
         tag_frame = f'tag36h11:{DOCK_TAGS[dock_id]}'
         deadline = time.monotonic() + 10.0
-        while time.monotonic() < deadline:
-            try:
-                tf = self._tf_buffer.lookup_transform(self._base_frame, tag_frame, Time())
-            except TransformException:
-                break                   # this tag was never seen
-            age = self.get_clock().now() - Time.from_msg(tf.header.stamp)
-            if age.nanoseconds > 0.5e9:
-                break                   # tag out of sight: do not steer on old data
-            q = tf.transform.rotation
-            yaw = math.atan2(2.0 * (q.w * q.z + q.x * q.y), 1.0 - 2.0 * (q.y * q.y + q.z * q.z))
-            if abs(yaw) < math.radians(0.3):
-                break
-            speed = min(0.2, max(0.02, 1.5 * abs(yaw)))   # rad/s, proportional to the error
-            self._send_turn(math.copysign(speed, yaw))
-            time.sleep(0.05)
-        self._send_turn(0.0)
+        try:
+            while time.monotonic() < deadline:
+                if self._stopping.is_set():
+                    raise _Stopped()
+                try:
+                    tf = self._tf_buffer.lookup_transform(self._base_frame, tag_frame, Time())
+                except TransformException:
+                    break                   # this tag was never seen
+                age = self.get_clock().now() - Time.from_msg(tf.header.stamp)
+                if age.nanoseconds > 0.5e9:
+                    break                   # tag out of sight: do not steer on old data
+                q = tf.transform.rotation
+                yaw = math.atan2(2.0 * (q.w * q.z + q.x * q.y),
+                                 1.0 - 2.0 * (q.y * q.y + q.z * q.z))
+                if abs(yaw) < math.radians(0.3):
+                    break
+                speed = min(0.2, max(0.02, 1.5 * abs(yaw)))   # rad/s, proportional to the error
+                self._send_turn(math.copysign(speed, yaw))
+                time.sleep(0.05)
+        finally:
+            self._send_turn(0.0)            # never leave the robot turning
         self.get_logger().info(f'aligned to {tag_frame}')
 
     def _send_turn(self, angular_z: float) -> None:
@@ -168,13 +200,32 @@ class ExecutorNode(Node):
         cmd.twist.angular.z = angular_z
         self._cmd_pub.publish(cmd)
 
-    @staticmethod
-    def _wait(future):
-        """Block this task's thread until the executor's other threads finish the future."""
+    def _wait(self, future):
+        """
+        Block this task's thread until the executor's other threads finish the future.
+
+        Raise _Stopped instead once stop() was called: then the answer may never come.
+        """
         done = threading.Event()
         future.add_done_callback(lambda _future: done.set())
-        done.wait()
+        while not (done.wait(timeout=0.1) or future.done()):
+            if self._stopping.is_set():
+                raise _Stopped()
         return future.result()
+
+    def stop(self, executor: MultiThreadedExecutor) -> None:
+        """
+        Cancel the docking goal in progress and let the task thread finish.
+
+        Call it after spinning ends and before ROS shuts down. Otherwise Nav2 keeps driving
+        the robot to the last dock, and the task thread waits for an answer forever.
+        """
+        with self._lock:
+            self._stopping.set()
+            goal = self._dock_goal
+        if goal is not None and self.context.ok():
+            self.get_logger().warning('shutting down: cancelling the docking goal')
+            executor.spin_until_future_complete(goal.cancel_goal_async(), timeout_sec=2.0)
 
     def _fire(self, trigger: str, task_id: str | None = None) -> None:
         with self._lock:
@@ -205,12 +256,25 @@ class ExecutorNode(Node):
 
 
 def main(args=None) -> None:
-    rclpy.init(args=args)
+    # Ctrl + C (SIGINT) and SIGTERM (systemd, or launch's second try) must not shut ROS
+    # down at once: stop() still needs it to cancel the docking goal. So rclpy installs no
+    # signal handler, and both signals become a KeyboardInterrupt in spin().
+    rclpy.init(args=args, signal_handler_options=SignalHandlerOptions.NO)
+    signal.signal(signal.SIGINT, signal.default_int_handler)
+    signal.signal(signal.SIGTERM, signal.default_int_handler)
     node = ExecutorNode()
+    executor = MultiThreadedExecutor()
+    executor.add_node(node)
     try:
-        rclpy.spin(node, executor=MultiThreadedExecutor())
+        executor.spin()
     except (KeyboardInterrupt, ExternalShutdownException):
         pass
     finally:
+        # Ctrl + C in a launch terminal comes twice (the terminal, then launch itself):
+        # the second one must not cut stop() short. It takes 2 s at most.
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+        signal.signal(signal.SIGTERM, signal.SIG_IGN)
+        node.stop(executor)
+        executor.shutdown()
         node.destroy_node()
         rclpy.try_shutdown()

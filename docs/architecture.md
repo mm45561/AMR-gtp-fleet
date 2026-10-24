@@ -29,6 +29,8 @@ flowchart LR
   DISPATCH button and the lamps are its I/O, and the screen and ROS only ask (section 5).
 - The robot's **task executor** decides *how* to do one leg (undock, plan, drive,
   dock, wait for the operator). `mock_amr` stands in for it in tests without Gazebo.
+  On Ctrl + C or SIGTERM it cancels the docking goal in progress before ROS shuts down,
+  so Nav2 does not keep driving the robot after the executor is gone.
 - One action goal = one leg of the cycle (`GO_TO_STATION`, `DELIVER`,
   `RETURN_TO_QUEUE`). Short goals keep the fleet manager in control between legs,
   so it can choose the return slot at the moment the robot actually needs it.
@@ -198,10 +200,6 @@ tag's pose.
 - No charging task: robots below `min_battery_percent` simply get no new work.
 - Queue slots must be side-by-side bays. A single-file lane would need "move up"
   tasks.
-- The task executor does not stop cleanly in the middle of a leg: `_wait()` waits for
-  the docking result without a timeout, so Ctrl + C leaves the process hanging until
-  `launch` kills it, and the Nav2 docking goal keeps the robot driving. On shutdown it
-  should cancel the goal and give up the wait.
 - The station PLC has registers for one station and three robots (`PLC_ROBOTS`).
 - OpenPLC's web page, FUXA and Modbus TCP have no real security here (default OpenPLC
   login, Modbus has no authentication). Keep them on a closed network.

@@ -103,7 +103,8 @@ The fleet manager waits until every robot has reported (`all 3 robots reported; 
 starts`), finds them parked and calls the nearest one to `gtp_1`. After the
 dispatch that robot delivers to `sort_1`; as soon as it is 1 m clear of the dock, the
 next robot is called to the station. The first one unloads for 4 s and returns to a free
-queue slot. To stop, press Ctrl + C in terminal 2, then in terminal 1.
+queue slot. To stop, press Ctrl + C in terminal 2, then in terminal 1. A task executor
+stopped in the middle of a leg cancels its docking goal first, so the robot stops.
 
 `robots:=1` in steps 1 and 2 runs only `amr_1`, which is lighter on the PC (wait 40 s
 after the map instead of 60 s).
@@ -249,6 +250,4 @@ on their own: `cd ~/amr_ws/src/amr_fleet_manager && python3 -m pytest test/test_
 
 ## Roadmap
 
-1. Task executor: stop cleanly in the middle of a leg (cancel the Nav2 docking goal and
-   stop waiting on shutdown; today `launch` has to kill it and the robot keeps driving).
-2. `amr_hardware_interface` for a real robot.
+1. `amr_hardware_interface` for a real robot.
