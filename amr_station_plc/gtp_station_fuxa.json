@@ -1,0 +1,633 @@
+{
+ "devices": {
+  "0": {
+   "id": "0",
+   "name": "FUXA Server",
+   "type": "FuxaServer",
+   "property": {},
+   "polling": 1000,
+   "enabled": true,
+   "tags": {
+    "t_23736157-dfb54002": {
+     "id": "t_23736157-dfb54002",
+     "name": "OpenPLC Connection Status",
+     "label": "OpenPLC Connection Status",
+     "value": "",
+     "type": "number",
+     "memaddress": "d_f56a9a0f-bb2c4ea5",
+     "init": "",
+     "sysType": 1,
+     "daq": {
+      "enabled": false,
+      "interval": 60,
+      "changed": false,
+      "restored": false
+     }
+    }
+   }
+  },
+  "d_f56a9a0f-bb2c4ea5": {
+   "id": "d_f56a9a0f-bb2c4ea5",
+   "name": "OpenPLC",
+   "enabled": true,
+   "type": "ModbusTCP",
+   "polling": 500,
+   "property": {
+    "address": "127.0.0.1:502",
+    "port": null,
+    "slaveid": "1",
+    "connectionOption": "TcpPort",
+    "socketReuse": null,
+    "options": false,
+    "delay": 10,
+    "timeout": 2000,
+    "forceFC": false
+   },
+   "tags": {
+    "t_a025a0d4-4c994aea": {
+     "id": "t_a025a0d4-4c994aea",
+     "name": "lamp_link",
+     "type": "Bool",
+     "memaddress": "000000",
+     "address": 4,
+     "divisor": 1,
+     "description": "%QX0.3",
+     "daq": {
+      "enabled": false,
+      "changed": false,
+      "interval": 60,
+      "restored": false
+     }
+    },
+    "t_b58dd745-1bf04c29": {
+     "id": "t_b58dd745-1bf04c29",
+     "name": "lamp_ready",
+     "type": "Bool",
+     "memaddress": "000000",
+     "address": 1,
+     "divisor": 1,
+     "description": "%QX0.0",
+     "daq": {
+      "enabled": false,
+      "changed": false,
+      "interval": 60,
+      "restored": false
+     }
+    },
+    "t_0d53eb2c-63ba41f8": {
+     "id": "t_0d53eb2c-63ba41f8",
+     "name": "lamp_busy",
+     "type": "Bool",
+     "memaddress": "000000",
+     "address": 2,
+     "divisor": 1,
+     "description": "%QX0.1",
+     "daq": {
+      "enabled": false,
+      "changed": false,
+      "interval": 60,
+      "restored": false
+     }
+    },
+    "t_dc642cf3-9fd04b6b": {
+     "id": "t_dc642cf3-9fd04b6b",
+     "name": "lamp_fault",
+     "type": "Bool",
+     "memaddress": "000000",
+     "address": 3,
+     "divisor": 1,
+     "description": "%QX0.2",
+     "daq": {
+      "enabled": false,
+      "changed": false,
+      "interval": 60,
+      "restored": false
+     }
+    },
+    "t_5ee23653-0c7648ed": {
+     "id": "t_5ee23653-0c7648ed",
+     "name": "docked_robot",
+     "type": "Int16",
+     "memaddress": "400000",
+     "address": 1027,
+     "divisor": 1,
+     "description": "%MW2",
+     "daq": {
+      "enabled": false,
+      "changed": false,
+      "interval": 60,
+      "restored": false
+     }
+    },
+    "t_af287535-ce4a4482": {
+     "id": "t_af287535-ce4a4482",
+     "name": "robot1_state",
+     "type": "Int16",
+     "memaddress": "400000",
+     "address": 1028,
+     "divisor": 1,
+     "description": "%MW3",
+     "daq": {
+      "enabled": false,
+      "changed": false,
+      "interval": 60,
+      "restored": false
+     }
+    },
+    "t_44b345f2-d8d74dec": {
+     "id": "t_44b345f2-d8d74dec",
+     "name": "robot2_state",
+     "type": "Int16",
+     "memaddress": "400000",
+     "address": 1029,
+     "divisor": 1,
+     "description": "%MW4",
+     "daq": {
+      "enabled": false,
+      "changed": false,
+      "interval": 60,
+      "restored": false
+     }
+    },
+    "t_214af641-1fbe4a8f": {
+     "id": "t_214af641-1fbe4a8f",
+     "name": "robot3_state",
+     "type": "Int16",
+     "memaddress": "400000",
+     "address": 1030,
+     "divisor": 1,
+     "description": "%MW5",
+     "daq": {
+      "enabled": false,
+      "changed": false,
+      "interval": 60,
+      "restored": false
+     }
+    },
+    "t_9484b955-8d3444f8": {
+     "id": "t_9484b955-8d3444f8",
+     "name": "dispatch_result",
+     "type": "Int16",
+     "memaddress": "400000",
+     "address": 1034,
+     "divisor": 1,
+     "description": "%MW9",
+     "daq": {
+      "enabled": false,
+      "changed": false,
+      "interval": 60,
+      "restored": false
+     }
+    },
+    "t_e3b3cf86-6be4492e": {
+     "id": "t_e3b3cf86-6be4492e",
+     "name": "hmi_button",
+     "type": "Int16",
+     "memaddress": "400000",
+     "address": 1035,
+     "divisor": 1,
+     "description": "%MW10",
+     "daq": {
+      "enabled": false,
+      "changed": false,
+      "interval": 60,
+      "restored": false
+     }
+    }
+   }
+  }
+ },
+ "hmi": {
+  "views": [
+   {
+    "id": "v_c524433c-48aa46c5",
+    "name": "MainView",
+    "profile": {
+     "width": 1024,
+     "height": 768,
+     "bkcolor": "#eceff1ff",
+     "margin": 10,
+     "align": "topCenter",
+     "gridType": "fixed",
+     "viewRenderDelay": 0
+    },
+    "items": {
+     "GSE_90437917-60064403": {
+      "id": "GSE_90437917-60064403",
+      "type": "svg-ext-gauge_semaphore",
+      "name": "lamp_ready_led",
+      "property": {
+       "variableId": "t_b58dd745-1bf04c29",
+       "bitmask": null,
+       "ranges": [
+        {
+         "type": "range",
+         "min": 0,
+         "max": 0,
+         "color": "#cfd8dc"
+        },
+        {
+         "type": "range",
+         "min": 1,
+         "max": 1,
+         "color": "#2e7d32"
+        }
+       ],
+       "events": [],
+       "actions": []
+      },
+      "label": "HtmlSemaphore",
+      "hide": false,
+      "lock": false
+     },
+     "GSE_8b79763f-e8734c21": {
+      "id": "GSE_8b79763f-e8734c21",
+      "type": "svg-ext-gauge_semaphore",
+      "name": "lamp_busy_led",
+      "property": {
+       "variableId": "t_0d53eb2c-63ba41f8",
+       "bitmask": null,
+       "ranges": [
+        {
+         "type": "range",
+         "min": 0,
+         "max": 0,
+         "color": "#cfd8dc"
+        },
+        {
+         "type": "range",
+         "min": 1,
+         "max": 1,
+         "color": "#f9a825"
+        }
+       ],
+       "events": [],
+       "actions": []
+      },
+      "label": "HtmlSemaphore",
+      "hide": false,
+      "lock": false
+     },
+     "GSE_d30967d7-db4948d0": {
+      "id": "GSE_d30967d7-db4948d0",
+      "type": "svg-ext-gauge_semaphore",
+      "name": "lamp_fault_led",
+      "property": {
+       "variableId": "t_dc642cf3-9fd04b6b",
+       "bitmask": null,
+       "ranges": [
+        {
+         "type": "range",
+         "min": 0,
+         "max": 0,
+         "color": "#cfd8dc"
+        },
+        {
+         "type": "range",
+         "min": 1,
+         "max": 1,
+         "color": "#c62828"
+        }
+       ],
+       "events": [],
+       "actions": []
+      },
+      "label": "HtmlSemaphore",
+      "hide": false,
+      "lock": false
+     },
+     "GSE_8ba5c25f-fce4468f": {
+      "id": "GSE_8ba5c25f-fce4468f",
+      "type": "svg-ext-gauge_semaphore",
+      "name": "lamp_link_led",
+      "property": {
+       "variableId": "t_a025a0d4-4c994aea",
+       "bitmask": null,
+       "ranges": [
+        {
+         "type": "range",
+         "min": 0,
+         "max": 0,
+         "color": "#cfd8dc"
+        },
+        {
+         "type": "range",
+         "min": 1,
+         "max": 1,
+         "color": "#1565c0"
+        }
+       ],
+       "events": [],
+       "actions": []
+      },
+      "label": "HtmlSemaphore",
+      "hide": false,
+      "lock": false
+     },
+     "VAL_cddf3571-c7ad4a05": {
+      "id": "VAL_cddf3571-c7ad4a05",
+      "type": "svg-ext-value",
+      "name": "docked_robot_value",
+      "property": {
+       "variableId": "t_5ee23653-0c7648ed",
+       "ranges": [],
+       "events": [],
+       "actions": []
+      },
+      "label": "Value",
+      "hide": false,
+      "lock": false
+     },
+     "VAL_f6dc5891-7ab2464d": {
+      "id": "VAL_f6dc5891-7ab2464d",
+      "type": "svg-ext-value",
+      "name": "dispatch_result_value",
+      "property": {
+       "variableId": "t_9484b955-8d3444f8",
+       "ranges": [],
+       "events": [],
+       "actions": []
+      },
+      "label": "Value",
+      "hide": false,
+      "lock": false
+     },
+     "HXB_31247d9d-001e4fda": {
+      "id": "HXB_31247d9d-001e4fda",
+      "type": "svg-ext-html_button",
+      "name": "dispatch_button",
+      "property": {
+       "variableId": "t_b58dd745-1bf04c29",
+       "text": "DISPATCH",
+       "ranges": [
+        {
+         "type": "range",
+         "min": 0,
+         "max": 0,
+         "color": "#90a4ae",
+         "stroke": "#ffffff"
+        },
+        {
+         "type": "range",
+         "min": 1,
+         "max": 1,
+         "color": "#2e7d32",
+         "stroke": "#ffffff"
+        }
+       ],
+       "events": [
+        {
+         "type": "click",
+         "action": "onSetValue",
+         "actparam": "1",
+         "actoptions": {
+          "function": "set",
+          "variable": {
+           "variableId": "t_e3b3cf86-6be4492e"
+          }
+         }
+        }
+       ],
+       "actions": []
+      },
+      "label": "HtmlButton",
+      "hide": false,
+      "lock": false
+     },
+     "GSE_564825e3-4c044425": {
+      "id": "GSE_564825e3-4c044425",
+      "type": "svg-ext-gauge_semaphore",
+      "name": "robot1_led",
+      "property": {
+       "variableId": "t_af287535-ce4a4482",
+       "bitmask": null,
+       "ranges": [
+        {
+         "type": "range",
+         "min": 0,
+         "max": 0,
+         "color": "#9e9e9e"
+        },
+        {
+         "type": "range",
+         "min": 1,
+         "max": 1,
+         "color": "#ffffff"
+        },
+        {
+         "type": "range",
+         "min": 2,
+         "max": 2,
+         "color": "#1565c0"
+        },
+        {
+         "type": "range",
+         "min": 3,
+         "max": 3,
+         "color": "#2e7d32"
+        },
+        {
+         "type": "range",
+         "min": 4,
+         "max": 6,
+         "color": "#f9a825"
+        },
+        {
+         "type": "range",
+         "min": 7,
+         "max": 7,
+         "color": "#64b5f6"
+        },
+        {
+         "type": "range",
+         "min": 8,
+         "max": 8,
+         "color": "#c62828"
+        }
+       ],
+       "events": [],
+       "actions": []
+      },
+      "label": "HtmlSemaphore",
+      "hide": false,
+      "lock": false
+     },
+     "VAL_8f2c8608-29a74462": {
+      "id": "VAL_8f2c8608-29a74462",
+      "type": "svg-ext-value",
+      "name": "robot1_state_value",
+      "property": {
+       "variableId": "t_af287535-ce4a4482",
+       "ranges": [],
+       "events": [],
+       "actions": []
+      },
+      "label": "Value",
+      "hide": false,
+      "lock": false
+     },
+     "GSE_eaa533ef-d7164269": {
+      "id": "GSE_eaa533ef-d7164269",
+      "type": "svg-ext-gauge_semaphore",
+      "name": "robot2_led",
+      "property": {
+       "variableId": "t_44b345f2-d8d74dec",
+       "bitmask": null,
+       "ranges": [
+        {
+         "type": "range",
+         "min": 0,
+         "max": 0,
+         "color": "#9e9e9e"
+        },
+        {
+         "type": "range",
+         "min": 1,
+         "max": 1,
+         "color": "#ffffff"
+        },
+        {
+         "type": "range",
+         "min": 2,
+         "max": 2,
+         "color": "#1565c0"
+        },
+        {
+         "type": "range",
+         "min": 3,
+         "max": 3,
+         "color": "#2e7d32"
+        },
+        {
+         "type": "range",
+         "min": 4,
+         "max": 6,
+         "color": "#f9a825"
+        },
+        {
+         "type": "range",
+         "min": 7,
+         "max": 7,
+         "color": "#64b5f6"
+        },
+        {
+         "type": "range",
+         "min": 8,
+         "max": 8,
+         "color": "#c62828"
+        }
+       ],
+       "events": [],
+       "actions": []
+      },
+      "label": "HtmlSemaphore",
+      "hide": false,
+      "lock": false
+     },
+     "VAL_93437101-d946499c": {
+      "id": "VAL_93437101-d946499c",
+      "type": "svg-ext-value",
+      "name": "robot2_state_value",
+      "property": {
+       "variableId": "t_44b345f2-d8d74dec",
+       "ranges": [],
+       "events": [],
+       "actions": []
+      },
+      "label": "Value",
+      "hide": false,
+      "lock": false
+     },
+     "GSE_c99a4636-228c470c": {
+      "id": "GSE_c99a4636-228c470c",
+      "type": "svg-ext-gauge_semaphore",
+      "name": "robot3_led",
+      "property": {
+       "variableId": "t_214af641-1fbe4a8f",
+       "bitmask": null,
+       "ranges": [
+        {
+         "type": "range",
+         "min": 0,
+         "max": 0,
+         "color": "#9e9e9e"
+        },
+        {
+         "type": "range",
+         "min": 1,
+         "max": 1,
+         "color": "#ffffff"
+        },
+        {
+         "type": "range",
+         "min": 2,
+         "max": 2,
+         "color": "#1565c0"
+        },
+        {
+         "type": "range",
+         "min": 3,
+         "max": 3,
+         "color": "#2e7d32"
+        },
+        {
+         "type": "range",
+         "min": 4,
+         "max": 6,
+         "color": "#f9a825"
+        },
+        {
+         "type": "range",
+         "min": 7,
+         "max": 7,
+         "color": "#64b5f6"
+        },
+        {
+         "type": "range",
+         "min": 8,
+         "max": 8,
+         "color": "#c62828"
+        }
+       ],
+       "events": [],
+       "actions": []
+      },
+      "label": "HtmlSemaphore",
+      "hide": false,
+      "lock": false
+     },
+     "VAL_35a5e4b9-02a74fa1": {
+      "id": "VAL_35a5e4b9-02a74fa1",
+      "type": "svg-ext-value",
+      "name": "robot3_state_value",
+      "property": {
+       "variableId": "t_214af641-1fbe4a8f",
+       "ranges": [],
+       "events": [],
+       "actions": []
+      },
+      "label": "Value",
+      "hide": false,
+      "lock": false
+     }
+    },
+    "variables": {},
+    "svgcontent": "<svg width=\"1024\" height=\"768\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:svg=\"http://www.w3.org/2000/svg\" xmlns:html=\"http://www.w3.org/1999/xhtml\"><filter id=\"blur-filter\" x=\"-3\" y=\"-3\" width=\"200\" height=\"200\"><feGaussianBlur stdDeviation=\"3\"/></filter><g><title>Layer 1</title><rect id=\"svg_e4162084-e9504ba6\" x=\"0\" y=\"0\" width=\"1024\" height=\"70\" rx=\"0\" fill=\"#263238\" stroke=\"none\" stroke-width=\"1\"/><text id=\"svg_fac09598-ae6a4511\" x=\"30\" y=\"46\" fill=\"#ffffff\" stroke=\"#000000\" stroke-width=\"0\" font-size=\"28\" font-family=\"sans-serif\" font-weight=\"bold\" text-anchor=\"start\" xml:space=\"preserve\">GTP Station gtp_1</text><text id=\"svg_a9643bca-66f2452e\" x=\"994\" y=\"44\" fill=\"#b0bec5\" stroke=\"#000000\" stroke-width=\"0\" font-size=\"14\" font-family=\"sans-serif\" font-weight=\"normal\" text-anchor=\"end\" xml:space=\"preserve\">OpenPLC  \u00b7  Modbus TCP</text><rect id=\"svg_aa57c290-2656422b\" x=\"30\" y=\"95\" width=\"460\" height=\"300\" rx=\"10\" fill=\"#ffffff\" stroke=\"#cfd8dc\" stroke-width=\"1\"/><text id=\"svg_067fe340-057444f1\" x=\"50\" y=\"130\" fill=\"#607d8b\" stroke=\"#000000\" stroke-width=\"0\" font-size=\"16\" font-family=\"sans-serif\" font-weight=\"bold\" text-anchor=\"start\" xml:space=\"preserve\">STATION LAMPS</text><g xml:space=\"preserve\" font-family=\"sans-serif\" stroke=\"#607d8b\" font-size=\"14\" fill=\"#cfd8dc\" y=\"162\" x=\"60\" type=\"svg-ext-gauge_semaphore\" id=\"GSE_90437917-60064403\"><ellipse xml:space=\"preserve\" font-family=\"sans-serif\" stroke=\"#607d8b\" font-size=\"14\" fill=\"#cfd8dc\" ry=\"18\" rx=\"18\" cy=\"180\" cx=\"78\" stroke-width=\"2\" id=\"GSE_20706b4a-e887426d\"/></g><text id=\"svg_f7783434-c8784bff\" x=\"112\" y=\"187\" fill=\"#263238\" stroke=\"#000000\" stroke-width=\"0\" font-size=\"20\" font-family=\"sans-serif\" font-weight=\"bold\" text-anchor=\"start\" xml:space=\"preserve\">READY</text><text id=\"svg_2ca3f8b5-bb0a4296\" x=\"240\" y=\"186\" fill=\"#607d8b\" stroke=\"#000000\" stroke-width=\"0\" font-size=\"14\" font-family=\"sans-serif\" font-weight=\"normal\" text-anchor=\"start\" xml:space=\"preserve\">the AMR may be dispatched</text><g xml:space=\"preserve\" font-family=\"sans-serif\" stroke=\"#607d8b\" font-size=\"14\" fill=\"#cfd8dc\" y=\"220\" x=\"60\" type=\"svg-ext-gauge_semaphore\" id=\"GSE_8b79763f-e8734c21\"><ellipse xml:space=\"preserve\" font-family=\"sans-serif\" stroke=\"#607d8b\" font-size=\"14\" fill=\"#cfd8dc\" ry=\"18\" rx=\"18\" cy=\"238\" cx=\"78\" stroke-width=\"2\" id=\"GSE_89a32bee-d8c64723\"/></g><text id=\"svg_5cfefcf7-7d2345ea\" x=\"112\" y=\"245\" fill=\"#263238\" stroke=\"#000000\" stroke-width=\"0\" font-size=\"20\" font-family=\"sans-serif\" font-weight=\"bold\" text-anchor=\"start\" xml:space=\"preserve\">BUSY</text><text id=\"svg_c5300d00-36214664\" x=\"240\" y=\"244\" fill=\"#607d8b\" stroke=\"#000000\" stroke-width=\"0\" font-size=\"14\" font-family=\"sans-serif\" font-weight=\"normal\" text-anchor=\"start\" xml:space=\"preserve\">a dispatch is being sent</text><g xml:space=\"preserve\" font-family=\"sans-serif\" stroke=\"#607d8b\" font-size=\"14\" fill=\"#cfd8dc\" y=\"278\" x=\"60\" type=\"svg-ext-gauge_semaphore\" id=\"GSE_d30967d7-db4948d0\"><ellipse xml:space=\"preserve\" font-family=\"sans-serif\" stroke=\"#607d8b\" font-size=\"14\" fill=\"#cfd8dc\" ry=\"18\" rx=\"18\" cy=\"296\" cx=\"78\" stroke-width=\"2\" id=\"GSE_6e84cd73-a6314730\"/></g><text id=\"svg_bd40daaa-e711402c\" x=\"112\" y=\"303\" fill=\"#263238\" stroke=\"#000000\" stroke-width=\"0\" font-size=\"20\" font-family=\"sans-serif\" font-weight=\"bold\" text-anchor=\"start\" xml:space=\"preserve\">FAULT</text><text id=\"svg_71acde2c-647645e7\" x=\"240\" y=\"302\" fill=\"#607d8b\" stroke=\"#000000\" stroke-width=\"0\" font-size=\"14\" font-family=\"sans-serif\" font-weight=\"normal\" text-anchor=\"start\" xml:space=\"preserve\">a robot needs a person</text><g xml:space=\"preserve\" font-family=\"sans-serif\" stroke=\"#607d8b\" font-size=\"14\" fill=\"#cfd8dc\" y=\"336\" x=\"60\" type=\"svg-ext-gauge_semaphore\" id=\"GSE_8ba5c25f-fce4468f\"><ellipse xml:space=\"preserve\" font-family=\"sans-serif\" stroke=\"#607d8b\" font-size=\"14\" fill=\"#cfd8dc\" ry=\"18\" rx=\"18\" cy=\"354\" cx=\"78\" stroke-width=\"2\" id=\"GSE_c5d92069-c33c4692\"/></g><text id=\"svg_a8a75ff3-f095479d\" x=\"112\" y=\"361\" fill=\"#263238\" stroke=\"#000000\" stroke-width=\"0\" font-size=\"20\" font-family=\"sans-serif\" font-weight=\"bold\" text-anchor=\"start\" xml:space=\"preserve\">ROS LINK</text><text id=\"svg_c0a09c05-d8f44eb1\" x=\"240\" y=\"360\" fill=\"#607d8b\" stroke=\"#000000\" stroke-width=\"0\" font-size=\"14\" font-family=\"sans-serif\" font-weight=\"normal\" text-anchor=\"start\" xml:space=\"preserve\">ROS is connected</text><rect id=\"svg_6ca75eeb-fff04027\" x=\"520\" y=\"95\" width=\"474\" height=\"300\" rx=\"10\" fill=\"#ffffff\" stroke=\"#cfd8dc\" stroke-width=\"1\"/><text id=\"svg_7061837c-7e564db7\" x=\"540\" y=\"130\" fill=\"#607d8b\" stroke=\"#000000\" stroke-width=\"0\" font-size=\"16\" font-family=\"sans-serif\" font-weight=\"bold\" text-anchor=\"start\" xml:space=\"preserve\">DISPATCH</text><text id=\"svg_fa1933fb-7c174bc1\" x=\"540\" y=\"178\" fill=\"#263238\" stroke=\"#000000\" stroke-width=\"0\" font-size=\"18\" font-family=\"sans-serif\" font-weight=\"normal\" text-anchor=\"start\" xml:space=\"preserve\">Robot at the dock</text><text id=\"svg_933d9275-230d42d6\" x=\"540\" y=\"198\" fill=\"#607d8b\" stroke=\"#000000\" stroke-width=\"0\" font-size=\"12\" font-family=\"sans-serif\" font-weight=\"normal\" text-anchor=\"start\" xml:space=\"preserve\">1..3 = amr_1..amr_3, 0 = none</text><g xml:space=\"preserve\" text-anchor=\"middle\" font-family=\"sans-serif\" stroke-width=\"0\" font-size=\"28\" stroke=\"#000000\" fill=\"#263238\" font-weight=\"bold\" y=\"188\" x=\"940\" type=\"svg-ext-value\" id=\"VAL_cddf3571-c7ad4a05\"><text y=\"188\" x=\"940\" xml:space=\"preserve\" text-anchor=\"middle\" font-family=\"sans-serif\" stroke-width=\"0\" font-size=\"28\" stroke=\"#000000\" fill=\"#263238\" font-weight=\"bold\" id=\"VAL_474178c5-0a234c56\">-</text></g><text id=\"svg_c9f1df70-599b4f7e\" x=\"540\" y=\"238\" fill=\"#263238\" stroke=\"#000000\" stroke-width=\"0\" font-size=\"18\" font-family=\"sans-serif\" font-weight=\"normal\" text-anchor=\"start\" xml:space=\"preserve\">Last dispatch</text><text id=\"svg_9f1b017f-408348ee\" x=\"540\" y=\"258\" fill=\"#607d8b\" stroke=\"#000000\" stroke-width=\"0\" font-size=\"12\" font-family=\"sans-serif\" font-weight=\"normal\" text-anchor=\"start\" xml:space=\"preserve\">0 none, 1 accepted, 2 rejected</text><g xml:space=\"preserve\" text-anchor=\"middle\" font-family=\"sans-serif\" stroke-width=\"0\" font-size=\"28\" stroke=\"#000000\" fill=\"#263238\" font-weight=\"bold\" y=\"248\" x=\"940\" type=\"svg-ext-value\" id=\"VAL_f6dc5891-7ab2464d\"><text y=\"248\" x=\"940\" xml:space=\"preserve\" text-anchor=\"middle\" font-family=\"sans-serif\" stroke-width=\"0\" font-size=\"28\" stroke=\"#000000\" fill=\"#263238\" font-weight=\"bold\" id=\"VAL_2943edf7-ca5b4a16\">-</text></g><g xml:space=\"preserve\" stroke=\"rgba(0,0,0,0)\" fill=\"rgba(0,0,0,0)\" type=\"svg-ext-html_button\" id=\"HXB_31247d9d-001e4fda\"><rect id=\"svg_2d5378fb-33324189\" height=\"86\" width=\"434\" y=\"280\" x=\"540\" stroke-width=\"0\"/><foreignObject id=\"H-HXB_be18146c-e22f4f62\" width=\"434\" height=\"86\" y=\"280\" x=\"540\"><BUTTON style=\"width:calc(100% - 6px);height:calc(100% - 6px);text-align:center;background-color:#cfd8dc;color:#ffffff;font-size:30px;font-family:sans-serif;font-weight:bold;\" class=\"md-btn  md-btn-raised\" id=\"B-HXB_be18146c-e22f4f62\">DISPATCH</BUTTON></foreignObject></g><text id=\"svg_22ffcc93-e0bc4e22\" x=\"757\" y=\"384\" fill=\"#607d8b\" stroke=\"#000000\" stroke-width=\"0\" font-size=\"12\" font-family=\"sans-serif\" font-weight=\"normal\" text-anchor=\"middle\" xml:space=\"preserve\">green = the PLC will accept the press</text><rect id=\"svg_ffa87598-46a346f2\" x=\"30\" y=\"420\" width=\"964\" height=\"260\" rx=\"10\" fill=\"#ffffff\" stroke=\"#cfd8dc\" stroke-width=\"1\"/><text id=\"svg_732dc209-6b124b8a\" x=\"50\" y=\"455\" fill=\"#607d8b\" stroke=\"#000000\" stroke-width=\"0\" font-size=\"16\" font-family=\"sans-serif\" font-weight=\"bold\" text-anchor=\"start\" xml:space=\"preserve\">ROBOTS</text><g xml:space=\"preserve\" font-family=\"sans-serif\" stroke=\"#607d8b\" font-size=\"14\" fill=\"#cfd8dc\" y=\"486\" x=\"166\" type=\"svg-ext-gauge_semaphore\" id=\"GSE_564825e3-4c044425\"><ellipse xml:space=\"preserve\" font-family=\"sans-serif\" stroke=\"#607d8b\" font-size=\"14\" fill=\"#cfd8dc\" ry=\"24\" rx=\"24\" cy=\"510\" cx=\"190\" stroke-width=\"2\" id=\"GSE_90dfac4a-91874e4f\"/></g><text id=\"svg_6a36e3c2-034f4932\" x=\"190\" y=\"568\" fill=\"#263238\" stroke=\"#000000\" stroke-width=\"0\" font-size=\"22\" font-family=\"sans-serif\" font-weight=\"bold\" text-anchor=\"middle\" xml:space=\"preserve\">amr_1</text><g xml:space=\"preserve\" text-anchor=\"middle\" font-family=\"sans-serif\" stroke-width=\"0\" font-size=\"24\" stroke=\"#000000\" fill=\"#263238\" font-weight=\"bold\" y=\"604\" x=\"190\" type=\"svg-ext-value\" id=\"VAL_8f2c8608-29a74462\"><text y=\"604\" x=\"190\" xml:space=\"preserve\" text-anchor=\"middle\" font-family=\"sans-serif\" stroke-width=\"0\" font-size=\"24\" stroke=\"#000000\" fill=\"#263238\" font-weight=\"bold\" id=\"VAL_84468fcb-bf9f487e\">-</text></g><text id=\"svg_b1cec92d-da2b487c\" x=\"190\" y=\"624\" fill=\"#607d8b\" stroke=\"#000000\" stroke-width=\"0\" font-size=\"12\" font-family=\"sans-serif\" font-weight=\"normal\" text-anchor=\"middle\" xml:space=\"preserve\">state</text><g xml:space=\"preserve\" font-family=\"sans-serif\" stroke=\"#607d8b\" font-size=\"14\" fill=\"#cfd8dc\" y=\"486\" x=\"488\" type=\"svg-ext-gauge_semaphore\" id=\"GSE_eaa533ef-d7164269\"><ellipse xml:space=\"preserve\" font-family=\"sans-serif\" stroke=\"#607d8b\" font-size=\"14\" fill=\"#cfd8dc\" ry=\"24\" rx=\"24\" cy=\"510\" cx=\"512\" stroke-width=\"2\" id=\"GSE_e5f1ee4f-692343c1\"/></g><text id=\"svg_470b818a-546b45aa\" x=\"512\" y=\"568\" fill=\"#263238\" stroke=\"#000000\" stroke-width=\"0\" font-size=\"22\" font-family=\"sans-serif\" font-weight=\"bold\" text-anchor=\"middle\" xml:space=\"preserve\">amr_2</text><g xml:space=\"preserve\" text-anchor=\"middle\" font-family=\"sans-serif\" stroke-width=\"0\" font-size=\"24\" stroke=\"#000000\" fill=\"#263238\" font-weight=\"bold\" y=\"604\" x=\"512\" type=\"svg-ext-value\" id=\"VAL_93437101-d946499c\"><text y=\"604\" x=\"512\" xml:space=\"preserve\" text-anchor=\"middle\" font-family=\"sans-serif\" stroke-width=\"0\" font-size=\"24\" stroke=\"#000000\" fill=\"#263238\" font-weight=\"bold\" id=\"VAL_ba665647-30414247\">-</text></g><text id=\"svg_63a8f9a6-099f4838\" x=\"512\" y=\"624\" fill=\"#607d8b\" stroke=\"#000000\" stroke-width=\"0\" font-size=\"12\" font-family=\"sans-serif\" font-weight=\"normal\" text-anchor=\"middle\" xml:space=\"preserve\">state</text><g xml:space=\"preserve\" font-family=\"sans-serif\" stroke=\"#607d8b\" font-size=\"14\" fill=\"#cfd8dc\" y=\"486\" x=\"810\" type=\"svg-ext-gauge_semaphore\" id=\"GSE_c99a4636-228c470c\"><ellipse xml:space=\"preserve\" font-family=\"sans-serif\" stroke=\"#607d8b\" font-size=\"14\" fill=\"#cfd8dc\" ry=\"24\" rx=\"24\" cy=\"510\" cx=\"834\" stroke-width=\"2\" id=\"GSE_d672062c-0b794066\"/></g><text id=\"svg_53849810-f5844f4b\" x=\"834\" y=\"568\" fill=\"#263238\" stroke=\"#000000\" stroke-width=\"0\" font-size=\"22\" font-family=\"sans-serif\" font-weight=\"bold\" text-anchor=\"middle\" xml:space=\"preserve\">amr_3</text><g xml:space=\"preserve\" text-anchor=\"middle\" font-family=\"sans-serif\" stroke-width=\"0\" font-size=\"24\" stroke=\"#000000\" fill=\"#263238\" font-weight=\"bold\" y=\"604\" x=\"834\" type=\"svg-ext-value\" id=\"VAL_35a5e4b9-02a74fa1\"><text y=\"604\" x=\"834\" xml:space=\"preserve\" text-anchor=\"middle\" font-family=\"sans-serif\" stroke-width=\"0\" font-size=\"24\" stroke=\"#000000\" fill=\"#263238\" font-weight=\"bold\" id=\"VAL_67e2ad4e-ec0b431e\">-</text></g><text id=\"svg_9cc7b252-e60c45f5\" x=\"834\" y=\"624\" fill=\"#607d8b\" stroke=\"#000000\" stroke-width=\"0\" font-size=\"12\" font-family=\"sans-serif\" font-weight=\"normal\" text-anchor=\"middle\" xml:space=\"preserve\">state</text><ellipse id=\"svg_3c1048fa-66c8498f\" cx=\"156\" cy=\"655\" rx=\"7\" ry=\"7\" fill=\"#ffffff\" stroke=\"#607d8b\" stroke-width=\"1\"/><text id=\"svg_3c89f1f2-6667420f\" x=\"168\" y=\"660\" fill=\"#607d8b\" stroke=\"#000000\" stroke-width=\"0\" font-size=\"13\" font-family=\"sans-serif\" font-weight=\"normal\" text-anchor=\"start\" xml:space=\"preserve\">1 idle</text><ellipse id=\"svg_3ca84cbf-03564df8\" cx=\"226\" cy=\"655\" rx=\"7\" ry=\"7\" fill=\"#1565c0\" stroke=\"#607d8b\" stroke-width=\"1\"/><text id=\"svg_454d8243-3ff941ae\" x=\"238\" y=\"660\" fill=\"#607d8b\" stroke=\"#000000\" stroke-width=\"0\" font-size=\"13\" font-family=\"sans-serif\" font-weight=\"normal\" text-anchor=\"start\" xml:space=\"preserve\">2 to GTP</text><ellipse id=\"svg_ecf83ffd-12004e24\" cx=\"308\" cy=\"655\" rx=\"7\" ry=\"7\" fill=\"#2e7d32\" stroke=\"#607d8b\" stroke-width=\"1\"/><text id=\"svg_b7d4f624-58514706\" x=\"320\" y=\"660\" fill=\"#607d8b\" stroke=\"#000000\" stroke-width=\"0\" font-size=\"13\" font-family=\"sans-serif\" font-weight=\"normal\" text-anchor=\"start\" xml:space=\"preserve\">3 docked</text><ellipse id=\"svg_4c31ca40-d3e84d0b\" cx=\"390\" cy=\"655\" rx=\"7\" ry=\"7\" fill=\"#f9a825\" stroke=\"#607d8b\" stroke-width=\"1\"/><text id=\"svg_cac7394e-7e6d4ffd\" x=\"402\" y=\"660\" fill=\"#607d8b\" stroke=\"#000000\" stroke-width=\"0\" font-size=\"13\" font-family=\"sans-serif\" font-weight=\"normal\" text-anchor=\"start\" xml:space=\"preserve\">4-6 loading, in transit, unloading</text><ellipse id=\"svg_ff077b9e-f8c144d3\" cx=\"620\" cy=\"655\" rx=\"7\" ry=\"7\" fill=\"#64b5f6\" stroke=\"#607d8b\" stroke-width=\"1\"/><text id=\"svg_119af710-0f5040ad\" x=\"632\" y=\"660\" fill=\"#607d8b\" stroke=\"#000000\" stroke-width=\"0\" font-size=\"13\" font-family=\"sans-serif\" font-weight=\"normal\" text-anchor=\"start\" xml:space=\"preserve\">7 returning</text><ellipse id=\"svg_cfc78171-ceb9469f\" cx=\"719\" cy=\"655\" rx=\"7\" ry=\"7\" fill=\"#c62828\" stroke=\"#607d8b\" stroke-width=\"1\"/><text id=\"svg_9e162072-d5044ba8\" x=\"731\" y=\"660\" fill=\"#607d8b\" stroke=\"#000000\" stroke-width=\"0\" font-size=\"13\" font-family=\"sans-serif\" font-weight=\"normal\" text-anchor=\"start\" xml:space=\"preserve\">8 error</text><ellipse id=\"svg_d62e25dd-95cf43b4\" cx=\"795\" cy=\"655\" rx=\"7\" ry=\"7\" fill=\"#9e9e9e\" stroke=\"#607d8b\" stroke-width=\"1\"/><text id=\"svg_d16d7855-9b034c06\" x=\"807\" y=\"660\" fill=\"#607d8b\" stroke=\"#000000\" stroke-width=\"0\" font-size=\"13\" font-family=\"sans-serif\" font-weight=\"normal\" text-anchor=\"start\" xml:space=\"preserve\">0 unknown</text><text id=\"svg_d27c1421-7e844ee0\" x=\"30\" y=\"715\" fill=\"#607d8b\" stroke=\"#000000\" stroke-width=\"0\" font-size=\"12\" font-family=\"sans-serif\" font-weight=\"normal\" text-anchor=\"start\" xml:space=\"preserve\">The HMI only asks: the PLC interlock decides every DISPATCH (amr_station_plc/station.st).</text></g></svg>",
+    "type": "svg"
+   }
+  ]
+ },
+ "recipes": [],
+ "ar": {
+  "enabled": false,
+  "markers": []
+ },
+ "version": "1.00",
+ "server": {
+  "id": "0",
+  "name": "FUXA Server",
+  "type": "FuxaServer",
+  "property": {},
+  "polling": 1000
+ }
+}
