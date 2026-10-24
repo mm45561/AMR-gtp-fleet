@@ -115,6 +115,28 @@ class DispatchResult:
     robot_id: str = ''
 
 
+@dataclass(frozen=True)
+class StationView:
+    """One station for the station HMI: which AMR holds the dock, and is it ready."""
+
+    station_id: str
+    robot_id: str               # the AMR that holds the dock; '' = none
+    ready: bool                 # that AMR is docked and waiting: dispatch() would accept
+    status: str                 # 'amr_1 is ready', or why it is not
+
+
+@dataclass(frozen=True)
+class RobotView:
+    """One robot for the station HMI."""
+
+    robot_id: str
+    state: RobotStateCode
+    online: bool
+    faulted: bool
+    task: str                   # e.g. 'DELIVER sort_1'; '' = no task
+    battery_percent: float
+
+
 class FleetCore:
     """Allocate GTP tasks to robots and keep the reservation table consistent."""
 
@@ -160,6 +182,23 @@ class FleetCore:
         tasks, self._outbox = self._outbox, []
         return tasks
 
+    def stations_view(self) -> list[StationView]:
+        """Return every station as the HMI shows it: ready means a dispatch would be accepted."""
+        views = []
+        for station_id in self._site.stations:
+            robot_id, problem = self._ready_robot(station_id)
+            views.append(StationView(station_id, robot_id, not problem,
+                                     problem or f'{robot_id} is ready'))
+        return views
+
+    def robots_view(self) -> list[RobotView]:
+        """Return every robot as the HMI shows it, in robot_ids order."""
+        return [RobotView(robot.robot_id, robot.state, robot.online, robot.faulted,
+                          f'{robot.task.task_type.name} {robot.task.target_id}'
+                          if robot.task else '',
+                          robot.battery_percent)
+                for robot in self._robots.values()]
+
     # ----------------------------------------------------------------- inputs
 
     def update_robot(self, robot_id: str, state: int, pose: Pose2D, battery_percent: float,
@@ -198,20 +237,11 @@ class FleetCore:
         if destination_id not in self._site.destinations:
             return DispatchResult(False, f'unknown destination {destination_id!r}')
 
-        robot_id = self._reservations.holder(dock_key(station_id))
-        if robot_id is None:
-            return DispatchResult(False, f'no AMR is assigned to {station_id}')
-        robot = self._robots[robot_id]
-        if robot.task is not None:
-            return DispatchResult(
-                False, f'{robot_id} is busy with {robot.task.task_type.name} '
-                f'({robot.task.task_id})', robot_id=robot_id)
-        if not robot.online or robot.faulted or robot.state not in self.AT_DOCK_STATES:
-            return DispatchResult(
-                False, f'{robot_id} is not ready at {station_id} (state {robot.state.name}, '
-                f'online={robot.online}, faulted={robot.faulted})', robot_id=robot_id)
+        robot_id, problem = self._ready_robot(station_id)
+        if problem:
+            return DispatchResult(False, problem, robot_id=robot_id)
 
-        task = self._new_task(TaskType.DELIVER, robot, dest_key(destination_id))
+        task = self._new_task(TaskType.DELIVER, self._robots[robot_id], dest_key(destination_id))
         if self._submit(task):
             message = f'{robot_id} is on its way to {destination_id}'
         else:
@@ -367,6 +397,21 @@ class FleetCore:
             self._submit(self._new_task(TaskType.GO_TO_STATION, robot, dock))
 
     # --------------------------------------------------------------- helpers
+
+    def _ready_robot(self, station_id: str) -> tuple[str, str]:
+        """Return the AMR holding the dock ('' if none) and why it cannot leave ('' = it can)."""
+        robot_id = self._reservations.holder(dock_key(station_id))
+        if robot_id is None:
+            return '', f'no AMR is assigned to {station_id}'
+        robot = self._robots[robot_id]
+        if robot.task is not None:
+            return robot_id, (f'{robot_id} is busy with {robot.task.task_type.name} '
+                              f'({robot.task.task_id})')
+        if not robot.online or robot.faulted or robot.state not in self.AT_DOCK_STATES:
+            return robot_id, (f'{robot_id} is not ready at {station_id} (state '
+                              f'{robot.state.name}, online={robot.online}, '
+                              f'faulted={robot.faulted})')
+        return robot_id, ''
 
     def _is_available(self, robot: RobotRecord, now: float) -> bool:
         """Return True if `robot` is parked in the queue and fit for new work."""

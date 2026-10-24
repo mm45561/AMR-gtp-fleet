@@ -284,6 +284,34 @@ def test_work_starts_after_the_wait_without_a_silent_robot():
     assert (task.robot_id, task.target_id) == ('amr_2', 'gtp_1')
 
 
+def test_station_view_is_ready_exactly_when_a_dispatch_would_work():
+    sim = FleetSim()
+    sim.park_all()
+    task = only(sim.tick())                         # amr_1 -> GO_TO_STATION gtp_1
+    station = sim.core.stations_view()[0]
+    assert (station.station_id, station.robot_id, station.ready) == ('gtp_1', 'amr_1', False)
+    sim.core.on_task_accepted(task.task_id)
+    sim.core.on_task_finished(task.task_id, True, '')
+    sim.report('amr_1', S.DOCKED_AT_GTP, 0.0, 2.0)
+    station = sim.core.stations_view()[0]
+    assert (station.ready, station.status) == (True, 'amr_1 is ready')
+    assert sim.core.dispatch('gtp_1').accepted
+    assert not sim.core.stations_view()[0].ready      # busy with the delivery now
+
+
+def test_robots_view_shows_tasks_and_faults():
+    sim = FleetSim()
+    sim.park_all()
+    task = only(sim.tick())
+    robots = {robot.robot_id: robot for robot in sim.core.robots_view()}
+    assert robots['amr_1'].task == 'GO_TO_STATION gtp_1'
+    assert (robots['amr_2'].task, robots['amr_2'].state, robots['amr_2'].online) == (
+        '', S.IDLE, True)
+    sim.core.on_task_accepted(task.task_id)
+    sim.core.on_task_finished(task.task_id, False, 'docking failed')
+    assert sim.core.robots_view()[0].faulted
+
+
 def test_invalid_configuration_is_rejected():
     with pytest.raises(ValueError, match='queue slots'):
         FleetCore(SITE, ['a', 'b', 'c', 'd'])
