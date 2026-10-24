@@ -1,7 +1,11 @@
-# GTP AMR Fleet (ROS 2)
+# GTP AMR Fleet: ROS 2, Gazebo, Nav2, PLC and HMI
 
-A prototype fleet of 1–3 autonomous mobile robots (designed to grow to 10+) that carry
-picked items from a Goods-to-Person (GTP) pick station to a sorting / consolidation area.
+Three MiR100-style autonomous mobile robots carry picked items from a Goods-to-Person (GTP)
+pick station to a sorting area. They run in Gazebo with Nav2, a fleet manager decides who
+goes where, and the station is operated like a real line: a PLC program owns the DISPATCH
+button and the lamps, and an HMI screen shows the station and the robots.
+
+![The system running: logs, Gazebo, RViz with the docking panel, and the station screen](docs/media/overview.jpg)
 
 ```
  ready queue ──► GTP dock ──► operator loads ──► DISPATCH ──► drop-off ──► worker unloads ──┐
@@ -9,15 +13,32 @@ picked items from a Goods-to-Person (GTP) pick station to a sorting / consolidat
       └─────────────────────────────────── return ───────────────────────────────────────────┘
 ```
 
-**Status:** three AMRs run the GTP cycle together in Gazebo under the fleet manager. Each
-one drives with its own Nav2 under `/amr_N` and parks on a floor AprilTag at every place;
-when the docked robot leaves with a delivery, the next one is called to the station. A
-robot that fails waits for a person and goes back to work with one service call. At the
-GTP station, a PLC program (OpenPLC) owns the DISPATCH button and the lamps, and a FUXA
-screen shows the station and the robots; `amr_plc_bridge` connects the PLC to the fleet
-manager over Modbus TCP.
+**What it does**
 
-Design details, the robot state list and the deadlock rules are in
+- **Fleet management.** The fleet manager (ROS 2, Python) reserves every dock, drop-off and
+  queue slot, calls the nearest robot to the station, and calls the next one as soon as the
+  leaving robot is 1 m clear. Its allocation logic has no ROS import and is unit tested.
+- **Navigation and docking.** Each robot runs its own Nav2 under `/amr_N` and parks on a
+  floor AprilTag at every place with Nav2's docking server: about 1 cm and under 0.3° on
+  the tag, three robots at 99.5 % real time in Gazebo.
+- **Industrial control.** The station's PLC program (IEC 61131-3 Structured Text on
+  OpenPLC) has an interlock, a request/answer handshake with ROS and a watchdog on the
+  ROS link. A FUXA HMI screen talks to it over Modbus TCP, and a ROS 2 bridge connects the
+  PLC to the fleet manager. The screen only asks; the PLC decides.
+- **Fault handling.** A robot that fails stops, keeps the places it holds, lights the
+  station's FAULT lamp, and goes back to work after one reset call.
+
+<img src="docs/media/station_screen.png" alt="Station screen in FUXA: lamps, the robot at the dock, DISPATCH and the three robots" width="560">
+
+| Layer | Tools |
+|---|---|
+| Robots | ROS 2 Lyrical, Nav2 (AMCL, MPPI controller, docking server), apriltag_ros, MiR100 model |
+| Simulation | Gazebo Jetty: warehouse world with floor tags, three robots |
+| Fleet | Python fleet manager, one ROS 2 action per leg of the cycle, pytest |
+| Station | OpenPLC (IEC 61131-3 ST), FUXA HMI, Modbus TCP, pymodbus |
+| Tools | colcon, Docker, Git |
+
+Design details, the robot state list, the deadlock rules and the PLC register map are in
 [docs/architecture.md](docs/architecture.md).
 
 ## Workspace layout
