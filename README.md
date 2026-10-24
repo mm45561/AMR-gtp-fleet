@@ -38,6 +38,8 @@ button and the lamps, and an HMI screen shows the station and the robots.
 | Station | OpenPLC (IEC 61131-3 ST), FUXA HMI, Modbus TCP, pymodbus |
 | Tools | colcon, Docker, Git |
 
+![Architecture: who talks to whom (top) and one GTP cycle with the handoff at the station (bottom)](docs/media/architecture.png)
+
 Design details, the robot state list, the deadlock rules and the PLC register map are in
 [docs/architecture.md](docs/architecture.md).
 
